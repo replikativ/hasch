@@ -34,13 +34,7 @@
 
   clojure.lang.IPersistentSet
   (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
-                                         (:set magics))))
-
-  ;; implement tagged literal instead
-  clojure.lang.IRecord
-  (-coerce [this hash-fn] (conj (concat (mapcat benc (str (type this)))
-                                        (padded-coerce this hash-fn))
-                                (:record magics))))
+                                         (:set magics)))))
 
 (defn atom? [val]
   (or (nil? val)
