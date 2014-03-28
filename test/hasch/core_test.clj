@@ -72,12 +72,12 @@
 (deftest code-hashing
   (testing "Code hashing."
     (is (= (-> '(fn fib [n]
-                  (if (or (= n 1) (= n 2)) 1
+                  (if (or (= n 0) (= n 1)) 1
                       (+ (fib (- n 1)) (fib (- n 2)))))
                edn-hash
                sha-1
                uuid5)
-           #uuid "242525f1-8ed7-5979-9232-6992dd1e11e4"))))
+           #uuid "265274e2-f93e-529c-8a95-30f54f7189b0"))))
 
 (deftest hash-stringification
   (testing "Stringification."
