@@ -7,7 +7,10 @@
                  [org.clojure/clojurescript "0.0-2173"]]
   :plugins [[lein-cljsbuild "1.0.2"]]
   :cljsbuild
-  {:builds
+  {:crossovers [hasch.benc]
+   :crossover-paths "src"
+   :crossover-jar false
+   :builds
    [{:source-paths ["src"]
      :compiler
      {:output-to "resources/public/js/main.js"
