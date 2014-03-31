@@ -1,10 +1,10 @@
 (ns hasch.platform
   (:require [goog.crypt.Sha1]
-            [hasch.benc :refer [IHashCoercion -coerce magics]]))
+            [hasch.benc :refer [IHashCoercion -coerce magics padded-coerce]]))
 
 (defn sha-1 [bytes]
   (let [md (goog.crypt.Sha1.)
-        sarr (into-array bytes)]
+        sarr (into-array (map #(if (neg? %) (+ % 256) %) bytes))]
     (.update md sarr)
     (map #(if (> % 127)
             (- % 256)
@@ -34,6 +34,7 @@
       (range (.-length input)))))
 
 
+
 (extend-protocol IHashCoercion
   js/Boolean
   boolean
@@ -56,14 +57,14 @@
 
   cljs.core/Symbol
   (-coerce [this hash-fn] (conj (mapcat benc
-                                        (concat (namespace this)
-                                                (name this)))
+                                        (concat (encode (or (namespace this) ""))
+                                                (encode (name this))))
                                 (:symbol magics)))
 
   cljs.core/Keyword
   (-coerce [this hash-fn] (conj (mapcat benc
-                                        (concat (namespace this)
-                                                (name this)))
+                                        (concat (encode (or (namespace this) ""))
+                                                (encode (name this))))
                                 (:keyword magics)))
 
   cljs.core/EmptyList
@@ -82,10 +83,7 @@
 
   cljs.core/PersistentHashSet
   (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
-                                         (:set magics))))
-
-
-  )
+                                         (:set magics)))))
 
 
 

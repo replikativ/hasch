@@ -43,18 +43,17 @@ Our hash version is coded in first 2 bits."
                          (bit-clear 62)))))
 
 
-;; TODO print edn, read and then coerce that, Date
 (extend-protocol IHashCoercion
   java.lang.Boolean
   (-coerce [this hash-fn] (list (:boolean magics) (if this 1 0)))
 
+  ;; don't distinguish characters from string for javascript
   java.lang.Character
-  (-coerce [this hash-fn] ;; might be Java specific for UTF values (?)
-    (conj (map byte (-> this Character/toString (.getBytes "UTF-8")))
-          (:character magics)))
+  (-coerce [this hash-fn] (conj (mapcat benc (map byte (.getBytes (str this) "UTF-8")))
+                                (:string magics)))
 
   java.lang.String
-  (-coerce [this hash-fn] (conj (mapcat benc this)
+  (-coerce [this hash-fn] (conj (mapcat benc (map byte (.getBytes this "UTF-8")))
                                 (:string magics)))
 
   java.lang.Integer
