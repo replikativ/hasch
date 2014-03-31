@@ -79,8 +79,38 @@ Our hash version is coded in first 2 bits."
 
   java.util.Date
   (-coerce [this hash-fn] (conj (mapcat benc (str (.getTime this)))
-                                (:inst magics))))
+                                (:inst magics)))
 
+  nil
+  (-coerce [this hash-fn] (list (:nil magics)))
+
+  clojure.lang.Symbol
+  (-coerce [this hash-fn] (conj (mapcat benc
+                                        (concat (namespace this)
+                                                (name this)))
+                                (:symbol magics)))
+
+  clojure.lang.Keyword
+  (-coerce [this hash-fn] (conj (mapcat benc
+                                        (concat (namespace this)
+                                                (name this)))
+                                (:keyword magics)))
+
+  clojure.lang.ISeq
+  (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
+                                         (:seq magics))))
+
+  clojure.lang.IPersistentVector
+  (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
+                                         (:vector magics))))
+
+  clojure.lang.IPersistentMap
+  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
+                                         (:map magics))))
+
+  clojure.lang.IPersistentSet
+  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
+                                         (:set magics)))))
 
 (defn boolean? [val]
   (= (type val) java.lang.Boolean))
