@@ -13,6 +13,10 @@
       (.substring 1)))
 
 
+(defn hash->str [bytes]
+  (apply str (map byte->hex bytes)))
+
+
 (defn sha-1 [bytes]
   (let [md (MessageDigest/getInstance "sha-1")
         sarr (into-array Byte/TYPE bytes)]
@@ -36,7 +40,7 @@ Our hash version is coded in first 2 bits."
     (java.util.UUID. (-> (bytes->long high)
                          (bit-or 0x0000000000005000)
                          (bit-and 0x7fffffffffff5fff)
-                         (bit-clear 63)
+                         (bit-clear 63) ;; needed because of BigInt cast of bitmask
                          (bit-clear 62))
                      (-> (bytes->long low)
                          (bit-set 63)

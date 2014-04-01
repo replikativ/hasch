@@ -2,6 +2,7 @@
   (:require [goog.crypt.Sha1]
             [hasch.benc :refer [IHashCoercion -coerce magics padded-coerce]]))
 
+
 (defn sha-1 [bytes]
   (let [md (goog.crypt.Sha1.)
         sarr (into-array (map #(if (neg? %) (+ % 256) %) bytes))]
@@ -12,13 +13,14 @@
 
 
 (defn byte->hex [b]
-  ;; TODO
-  #_(-> b
+  (-> b
       (bit-and 0xff)
       (+ 0x100)
-      (Integer/toString 16)
+      (.toString 16)
       (.substring 1)))
 
+(defn hash->str [bytes]
+  (apply str (map byte->hex bytes)))
 
 
 (defn benc [n]
@@ -33,6 +35,21 @@
       #(bit-and (.charCodeAt input %) 0xFF)
       (range (.-length input)))))
 
+(defn uuid5
+  "Generates a uuid5 from a sha-1 hash byte sequence.
+Our hash version is coded in first 2 bits."
+  [sha-hash]
+  (let [[hb1 hb2 hb3 hb4 hb5 hb6 hb7 hb8
+         lb1 lb2 lb3 lb4 lb5 lb6 lb7 lb8] sha-hash]
+    (-> [(bit-clear (bit-clear hb1 7) 6) hb2 hb3 hb4 hb5 hb6 (bit-or 0x50 (bit-and 0x5f hb7)) hb8
+         (bit-clear (bit-set lb1 7) 6) lb2 lb3 lb4 lb5 lb6 lb7 lb8]
+        hash->str
+        ((fn [s] (str (apply str (take 8 s))
+                     "-" (apply str (take 4 (drop 8 s)))
+                     "-" (apply str (take 4 (drop 12 s)))
+                     "-" (apply str (take 4 (drop 16 s)))
+                     "-" (apply str (drop 20 s)))))
+        UUID.)))
 
 
 (extend-protocol IHashCoercion
