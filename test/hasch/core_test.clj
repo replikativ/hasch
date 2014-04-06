@@ -1,8 +1,8 @@
 (ns hasch.core-test
-  (:require [clojure.test :refer :all]
-            [hasch.core :refer :all]
-            [hasch.platform :refer :all]
-            [hasch.benc :refer :all]))
+  (:require [clojure.test :refer [deftest testing is]]
+            [hasch.core :refer [edn-hash]]
+            [hasch.platform :refer [uuid5 sha-1 hash->str]]
+            [hasch.benc :refer [padded-coerce]]))
 
 
 (deftest hash-test
@@ -24,6 +24,9 @@
 
     (is (= (edn-hash "hello")
            '(-8 107 -8 -32 97 -4 24 38 -15 87 52 43 97 -10 104 -98 -52 -62 -53 -18)))
+
+    (is (= (edn-hash "小鳩ちゃんかわいいなぁ")
+           '(58 68 -48 62 28 -113 20 -80 -18 -105 17 -53 -67 25 -65 47 101 -9 -76 50)))
 
     (is (= (edn-hash 1234567890)
            '(66 -122 -53 -14 127 -30 88 -126 54 -32 -76 105 -17 53 0 -95 -67 -97 -51 113)))
@@ -82,3 +85,11 @@
 
 
 #_(run-tests)
+
+
+;; fire up repl
+#_(do
+    (ns dev)
+    (def repl-env (reset! cemerick.austin.repls/browser-repl-env
+                         (cemerick.austin/repl-env)))
+    (cemerick.austin.repls/cljs-repl repl-env))

@@ -21,10 +21,3 @@
        (if (atomic? val)
          (hash-fn coercion)
          coercion))))
-
-
-#_(do
-    (ns dev)
-    (def repl-env (reset! cemerick.austin.repls/browser-repl-env
-                         (cemerick.austin/repl-env)))
-    (cemerick.austin.repls/cljs-repl repl-env))

@@ -7,7 +7,13 @@ Support for edn types on the JVM and JavaScript is complete except for tagged li
 
 REMEMBER THAT BREAKING THE HASH FUNCTION PROBABLY BREAKS YOUR DATA!
 
-You can extend the `IHashCoercion` protocol to your types and use free magic numbers <-111. Please point out flaws you find!
+You can extend the `IHashCoercion` protocol to your types and use free magic numbers -128<x<-111.
+
+*Please point out flaws you find!*
+
+# TODO
+- Use test.check/double.check property based tests.
+- Profile for performance
 
 ## Usage
 

@@ -46,6 +46,7 @@ Our hash version is coded in first 2 bits."
                          (bit-set 63)
                          (bit-clear 62)))))
 
+(mapcat benc (.getBytes "hällo" "UTF-8"))
 
 (extend-protocol IHashCoercion
   java.lang.Boolean

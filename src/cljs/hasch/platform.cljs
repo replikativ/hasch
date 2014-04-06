@@ -2,6 +2,12 @@
   (:require [goog.crypt.Sha1]
             [hasch.benc :refer [IHashCoercion -coerce magics padded-coerce]]))
 
+#_(do
+    (ns dev)
+    (def repl-env (reset! cemerick.austin.repls/browser-repl-env
+                         (cemerick.austin/repl-env)))
+    (cemerick.austin.repls/cljs-repl repl-env))
+
 
 (defn sha-1 [bytes]
   (let [md (goog.crypt.Sha1.)
@@ -29,11 +35,46 @@
     (list n)))
 
 
+;; taken from http://jsperf.com/uint8array-vs-array-encode-to-utf8/2
+;; which is taken from //http://user1.matsumoto.ne.jp/~goma/js/utf.js
+;; verified against: "小鳩ちゃんかわいいなぁ"
+(defn utf8 [s]
+  (mapcat
+   (fn [pos]
+     (let [c (.charCodeAt s pos)]
+       (cond (<= c 0x7F) [(bit-and c 0xFF)]
+             (<= c 0x7FF) [(bit-or 0xC0 (bit-shift-right c 6))
+                           (bit-or 0x80 (bit-and c 0x3F))]
+             (<= c 0xFFFF) [(bit-or 0xE0 (bit-shift-right c 12))
+                            (bit-or 0x80 (bit-and (bit-shift-right c 6) 0x3F))
+                            (bit-or 0x80 (bit-and c 0x3F))]
+             :default (let [j (loop [j 4]
+                                (if (pos? (bit-shift-right c (* j 6)))
+                                  (recur (inc j))
+                                  j))
+                            init (bit-or (bit-and (bit-shift-right 0xFF00 j) 0xFF)
+                                         (bit-shift-right c (* 6 (dec j))))]
+                        (conj (->> (range (dec j))
+                                   reverse
+                                   (map #(bit-or 0x80
+                                                 (bit-and (bit-shift-right c (* 6 %))
+                                                          0x3F))))
+                              init)))))
+   (range (.-length s))))
+
+
+(defn jvm-byte [b]
+  (if (> b 127) (- b 256) b))
+
+
 (defn encode [input]
-  (mapcat benc
-    (map
-      #(bit-and (.charCodeAt input %) 0xFF)
-      (range (.-length input)))))
+  (->> input
+       utf8
+       (map jvm-byte)
+       (mapcat benc)))
+
+#_(encode "小鳩ちゃんかわいいなぁ")
+
 
 (defn uuid5
   "Generates a uuid5 from a sha-1 hash byte sequence.
@@ -53,24 +94,24 @@ Our hash version is coded in first 2 bits."
 
 
 (extend-protocol IHashCoercion
-  js/Boolean
+  nil
+  (-coerce [this hash-fn] (list (:nil magics)))
+
   boolean
   (-coerce [this hash-fn] (list (:boolean magics) (if this 1 0)))
 
-  js/String
+  string
   (-coerce [this hash-fn] (conj (encode this) (:string magics)))
 
-  js/Number
+  number
   (-coerce [this hash-fn] (conj (encode (str this)) (:number magics)))
 
   js/Date
-  (-coerce [this hash-fn] (conj (encode (str (.getTime this))) (:inst magics)))
+  (-coerce [this hash-fn]
+    (conj (encode (str (.getTime this))) (:inst magics)))
 
   cljs.core/UUID
   (-coerce [this hash-fn] (conj (encode (.-uuid this)) (:uuid magics)))
-
-  nil
-  (-coerce [this hash-fn] (list (:nil magics)))
 
   cljs.core/Symbol
   (-coerce [this hash-fn] (conj (mapcat benc
@@ -85,7 +126,13 @@ Our hash version is coded in first 2 bits."
                                 (:keyword magics)))
 
   cljs.core/EmptyList
+  (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
+                                         (:seq magics))))
+
   cljs.core/List
+  (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
+                                         (:seq magics))))
+
   cljs.core/Cons
   (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
                                          (:seq magics))))
@@ -95,6 +142,10 @@ Our hash version is coded in first 2 bits."
                                          (:vector magics))))
 
   cljs.core/PersistentArrayMap
+  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
+                                         (:map magics))))
+
+  cljs.core/PersistentHashMap
   (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
                                          (:map magics))))
 
