@@ -1,10 +1,11 @@
 (ns ^:shared hasch.core
   "Hashing functions for EDN."
   (:require [hasch.benc :refer [IHashCoercion -coerce benc magics padded-coerce]]
-            [hasch.platform :refer [sha-1 boolean? uuid? date? byte->hex]]))
+            [hasch.platform :refer [sha-1 boolean? date? byte->hex]]))
 
 (def uuid4 hasch.platform/uuid4)
 (def uuid5 hasch.platform/uuid5)
+(def uuid? hasch.platform/uuid?)
 
 
 (defn atomic? [val]
