@@ -3,6 +3,9 @@
   (:require [hasch.benc :refer [IHashCoercion -coerce benc magics padded-coerce]]
             [hasch.platform :refer [sha-1 boolean? uuid? date? byte->hex]]))
 
+
+(def uuid5 hasch.platform/uuid5)
+
 (defn atomic? [val]
   (or (nil? val)
       (boolean? val)
@@ -13,6 +16,7 @@
       (number? val)
       (uuid? val)
       (date? val)))
+
 
 (defn edn-hash
   ([val] (edn-hash val sha-1))

@@ -12,6 +12,7 @@ You can extend the `IHashCoercion` protocol to your types and use free magic num
 *Please point out flaws you find!*
 
 # TODO
+- Automate tests from js (with cljx?).
 - Use test.check/double.check property based tests.
 - Profile for performance
 
@@ -19,11 +20,10 @@ You can extend the `IHashCoercion` protocol to your types and use free magic num
 
     (use 'hasch.core)
     (edn-hash ["hello world" {:a 3.14} #{42} '(if true nil \f)])
-    => (-34 50 4 7 -55 3 90 33 -124 27 12 68 -85 -12 29 -79 100 96 -27 118)
+    => (-104 -11 -108 -93 -66 119 -92 73 32 -75 -73 21 82 -31 -45 122 -31 115 27 -23)
 
-    (use 'hasch.platform)
     (uuid5 (edn-hash "hello world"))
-    => #uuid "32860372-c8c5-5b05-96bc-2ced270f305b"
+    => #uuid "09c1649c-40c3-51cc-829c-dc781de2eda0"
 
 ## License
 

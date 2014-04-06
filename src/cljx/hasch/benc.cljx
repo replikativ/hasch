@@ -5,19 +5,18 @@
   (-coerce [this hash-fn]))
 
 ;; changes break hashes!
-(def magics {:string -99
-             :symbol -100
-             :keyword -101
-             :number -102
-             :vector -103
-             :seq -104
-             :map -105
-             :set -106
-             :nil -107
-             :boolean -108
-             :character -109
-             :uuid -110
-             :inst -111})
+(def magics {:nil -99
+             :boolean -100
+             :number -101
+             :string -102
+             :symbol -103
+             :keyword -104
+             :inst -105
+             :uuid -106
+             :seq -107
+             :vector -108
+             :map -109
+             :set -110})
 
 
 (defn benc
