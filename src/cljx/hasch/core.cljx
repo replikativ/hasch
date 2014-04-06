@@ -3,8 +3,9 @@
   (:require [hasch.benc :refer [IHashCoercion -coerce benc magics padded-coerce]]
             [hasch.platform :refer [sha-1 boolean? uuid? date? byte->hex]]))
 
-
+(def uuid4 hasch.platform/uuid4)
 (def uuid5 hasch.platform/uuid5)
+
 
 (defn atomic? [val]
   (or (nil? val)
@@ -19,9 +20,15 @@
 
 
 (defn edn-hash
+  "Hash an edn value with SHA-1 by default or a compatible hash function of choice."
   ([val] (edn-hash val sha-1))
   ([val hash-fn]
      (let [coercion (map byte (-coerce val hash-fn))]
        (if (atomic? val)
          (hash-fn coercion)
          coercion))))
+
+(defn uuid
+  "Creates random UUID-4 without argument or UUID-5 for the argument value."
+  ([] (uuid4))
+  ([val] (-> val edn-hash uuid5)))

@@ -4,6 +4,10 @@
   (:import java.security.MessageDigest
            java.nio.ByteBuffer))
 
+(defn uuid4
+  "Generates a UUID version 4 (random)."
+  []
+  (java.util.UUID/randomUUID))
 
 (defn byte->hex [b]
   (-> b
@@ -17,7 +21,10 @@
   (apply str (map byte->hex bytes)))
 
 
-(defn sha-1 [bytes]
+(defn sha-1
+  "Return a SHA-1 hash in -128 to 127 byte encoding
+for an input sequence in the same encoding."
+  [bytes]
   (let [md (MessageDigest/getInstance "sha-1")
         sarr (into-array Byte/TYPE bytes)]
     (.update md sarr)
@@ -32,7 +39,7 @@
 
 
 (defn uuid5
-  "Generates a uuid5 from a sha-1 hash byte sequence.
+  "Generates a UUID version 5 from a sha-1 hash byte sequence.
 Our hash version is coded in first 2 bits."
   [sha-hash]
   (let [high  (take 8 sha-hash)
@@ -115,6 +122,7 @@ Our hash version is coded in first 2 bits."
   clojure.lang.IPersistentSet
   (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
                                          (:set magics)))))
+
 
 (defn boolean? [val]
   (= (type val) java.lang.Boolean))

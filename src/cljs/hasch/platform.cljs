@@ -9,7 +9,33 @@
     (cemerick.austin.repls/cljs-repl repl-env))
 
 
-(defn sha-1 [bytes]
+;; taken from https://github.com/whodidthis/cljs-uuid-utils/blob/master/src/cljs_uuid_utils.cljs
+;; Copyright (C) 2012 Frank Siebenlist
+;; Distributed under the Eclipse Public License, the same as Clojure.
+;; TODO check: might not have enough randomness in some browsers (?)
+(defn uuid4
+  "(uuid4) => new-uuid
+   Arguments and Values:
+   new-uuid --- new type 4 (pseudo randomly generated) cljs.core/UUID instance.
+   Description:
+   Returns pseudo randomly generated UUID,
+   like: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx as per http://www.ietf.org/rfc/rfc4122.txt.
+   Examples:
+   (uuid4) => #uuid \"305e764d-b451-47ae-a90d-5db782ac1f2e\"
+   (type (uuid4)) => cljs.core/UUID"
+  []
+  (letfn [(f [] (.toString (rand-int 16) 16))
+          (g [] (.toString (bit-or 0x8 (bit-and 0x3 (rand-int 15))) 16))]
+    (UUID. (.toString (.append (goog.string.StringBuffer.)
+       (f) (f) (f) (f) (f) (f) (f) (f) "-" (f) (f) (f) (f)
+       "-4" (f) (f) (f) "-" (g) (f) (f) (f) "-"
+       (f) (f) (f) (f) (f) (f) (f) (f) (f) (f) (f) (f))))))
+
+
+(defn sha-1
+  "Return a SHA-1 hash in -128 to 127 byte encoding
+for an input sequence in the same encoding."
+  [bytes]
   (let [md (goog.crypt.Sha1.)
         sarr (into-array (map #(if (neg? %) (+ % 256) %) bytes))]
     (.update md sarr)
@@ -38,7 +64,9 @@
 ;; taken from http://jsperf.com/uint8array-vs-array-encode-to-utf8/2
 ;; which is taken from //http://user1.matsumoto.ne.jp/~goma/js/utf.js
 ;; verified against: "小鳩ちゃんかわいいなぁ"
-(defn utf8 [s]
+(defn utf8
+  "Encodes a string as UTF-8 in a 0 to 256 byte value seq."
+  [s]
   (mapcat
    (fn [pos]
      (let [c (.charCodeAt s pos)]

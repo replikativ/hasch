@@ -8,3 +8,6 @@ pom.xml.asc
 *.class
 /.lein-*
 /.nrepl-port
+/.repl*
+/out*
+/.cljsbuild*
