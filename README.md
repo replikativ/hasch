@@ -5,11 +5,11 @@ You can also create UUID5 (using SHA-1) from it. Alternatively you can use your 
 
 Support for edn types on the JVM and JavaScript is complete except for tagged literals, which are supposed to create platform specific objects and cannot be supported.
 
-REMEMBER THAT BREAKING THE HASH FUNCTION PROBABLY BREAKS YOUR DATA!
+REMEMBER THAT BREAKING THE HASH FUNCTION PROBABLY BREAKS YOUR STORED DATA!
 
-You can extend the `IHashCoercion` protocol to your types and use free magic numbers -128<x<-120.
+You can extend the `IHashCoercion` protocol to your types and use free magic numbers -128<=x<=-120.
 
-*Please point out flaws you find!*
+*Support for some types on cljs might be missing. Please point out any flaws you find!*
 
 # TODO
 - Automate tests from js (with cljx?).
