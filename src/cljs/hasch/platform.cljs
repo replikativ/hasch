@@ -33,7 +33,7 @@
 
 
 (defn sha-1
-  "Return a SHA-1 hash in -128 to 127 byte encoding
+  "Return a SHA-1 hash in signed byte encoding
 for an input sequence in the same encoding."
   [bytes]
   (let [md (goog.crypt.Sha1.)
@@ -51,6 +51,7 @@ for an input sequence in the same encoding."
       (.toString 16)
       (.substring 1)))
 
+
 (defn hash->str [bytes]
   (apply str (map byte->hex bytes)))
 
@@ -65,7 +66,7 @@ for an input sequence in the same encoding."
 ;; which is taken from //http://user1.matsumoto.ne.jp/~goma/js/utf.js
 ;; verified against: "小鳩ちゃんかわいいなぁ"
 (defn utf8
-  "Encodes a string as UTF-8 in a 0 to 256 byte value seq."
+  "Encodes a string as UTF-8 in an unsigned byte value seq."
   [s]
   (mapcat
    (fn [pos]
@@ -91,14 +92,14 @@ for an input sequence in the same encoding."
    (range (.-length s))))
 
 
-(defn jvm-byte [b]
+(defn signed-byte [b]
   (if (> b 127) (- b 256) b))
 
 
 (defn encode [input]
   (->> input
        utf8
-       (map jvm-byte)
+       (map signed-byte)
        (mapcat benc)))
 
 #_(encode "小鳩ちゃんかわいいなぁ")
