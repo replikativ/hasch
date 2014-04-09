@@ -14,6 +14,7 @@ Having said that, you can extend the `IHashCoercion` protocol to your types and 
 # TODO
 - Decide whether we implement protocols (IMap,...) or for concrete type (PersistentHashMap), depending on what can be considered edn at runtime (immutability?).
 - Automate tests in js (with cljx?).
+- Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a peristent data-structure tree by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [geschichte](https://github.com/ghubber/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
 - Use test.check/double.check property based tests.
 - Profile for performance.
 
