@@ -21,10 +21,14 @@ Having said that, you can extend the `IHashCoercion` protocol to your types and 
 ## Usage
 
 Include in your `project.clj` for Leiningen 2+ with:
+
+~~~clojure
     [net.polyc0l0r/hash "0.1.0"]
+~~~
 
 Then you can access the major function through `hash.core`:
 
+~~~clojure
     (use 'hasch.core)
     (edn-hash ["hello world" {:a 3.14} #{42} '(if true nil \f)])
     => (-104 -11 -108 -93 -66 119 -92 73 32 -75 -73 21 82 -31 -45 122 -31 115 27 -23)
@@ -35,6 +39,7 @@ Then you can access the major function through `hash.core`:
     ;; or just use the convenience multi-arity uuid fn:
     (uuid) => #uuid "a27dfbb9-b69a-4f08-8df4-471464bfeb37"
     (uuid "hello world") => #uuid "09c1649c-40c3-51cc-829c-dc781de2eda0"
+~~~
 
 ## License
 
