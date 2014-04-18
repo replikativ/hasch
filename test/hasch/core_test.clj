@@ -1,9 +1,11 @@
 (ns hasch.core-test
   (:require [clojure.test :refer [deftest testing is]]
-            [hasch.core :refer [edn-hash]]
+            [hasch.core :refer [edn-hash uuid]]
             [hasch.platform :refer [uuid5 sha-1 hash->str]]
             [hasch.benc :refer [padded-coerce]]))
 
+
+(uuid)
 
 (deftest hash-test
   (testing "Basic hash coercions of EDN primitives."

@@ -20,6 +20,11 @@ Having said that, you can extend the `IHashCoercion` protocol to your types and 
 
 ## Usage
 
+Include in your `project.clj` for Leiningen 2+ with:
+    [net.polyc0l0r/hash "0.1.0"]
+
+Then you can access the major function through `hash.core`:
+
     (use 'hasch.core)
     (edn-hash ["hello world" {:a 3.14} #{42} '(if true nil \f)])
     => (-104 -11 -108 -93 -66 119 -92 73 32 -75 -73 21 82 -31 -45 122 -31 115 27 -23)
