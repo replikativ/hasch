@@ -5,10 +5,6 @@
             [hasch.benc :refer [padded-coerce]]))
 
 
-(defprotocol IFoo (-foo [this]))
-
-(defrecord Bar [name] IFoo (-foo [this] name))
-
 (deftest hash-test
   (testing "Basic hash coercions of EDN primitives."
     (is (= (edn-hash nil)
@@ -62,10 +58,7 @@
            '(71 88 -9 109 68 7 -47 86 -3 84 -57 61 69 49 -58 26 -22 55 -22 -107)))
 
     (is (= (edn-hash #{1 2 3 4})
-           '(103 23 -84 -86 51 89 46 111 17 -38 15 44 111 -121 120 -14 -72 35 -110 -114)))
-
-    (is (= (edn-hash (Bar. "hello"))
-           '(-93 67 -94 -104 -69 13 -64 108 -88 -121 40 126 -4 82 15 48 -83 -38 -52 53)))))
+           '(103 23 -84 -86 51 89 46 111 17 -38 15 44 111 -121 120 -14 -72 35 -110 -114)))))
 
 
 (deftest padded-coercion

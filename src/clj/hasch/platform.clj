@@ -53,10 +53,6 @@ Our hash version is coded in first 2 bits."
                          (bit-set 63)
                          (bit-clear 62)))))
 
-(defn- hash-record [this hash-fn]
-  (hash-fn (concat (mapcat benc (pr-str (type this)))
-                   (padded-coerce (into {} this) hash-fn))))
-
 
 (extend-protocol IHashCoercion
   java.lang.Boolean
@@ -119,18 +115,12 @@ Our hash version is coded in first 2 bits."
                                          (:vector magics))))
 
   clojure.lang.IPersistentMap
-  (-coerce [this hash-fn]
-    (if (instance? clojure.lang.IRecord this)
-      (hash-record this hash-fn)
-      (hash-fn (conj (padded-coerce this hash-fn)
-                     (:map magics)))))
+  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
+                                         (:map magics))))
 
   clojure.lang.IPersistentSet
   (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
-                                         (:set magics))))
-
-  clojure.lang.IRecord
-  (-coerce [this hash-fn] (hash-record this hash-fn)))
+                                         (:set magics)))))
 
 
 (defn boolean? [val]

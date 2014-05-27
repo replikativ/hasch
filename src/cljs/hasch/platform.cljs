@@ -166,12 +166,6 @@ Our hash version is coded in first 2 bits."
           (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
                          (:vector magics)))
 
-          ;; implements IMap as well, so needs to be before IMap
-          (satisfies? IRecord this)
-          ;; HACK to make consistent with Clojure...
-          (hash-fn (concat (encode (replace (replace (pr-str (type this)) "/" "." ) "-" "_"))
-                           (padded-coerce (into {} this) hash-fn)))
-
           (satisfies? IMap this)
           (hash-fn (conj (padded-coerce this hash-fn)
                          (:map magics)))
