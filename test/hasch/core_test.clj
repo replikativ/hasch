@@ -5,7 +5,9 @@
             [hasch.benc :refer [padded-coerce]]))
 
 
-(uuid)
+(defprotocol IFoo (-foo [this]))
+
+(defrecord Bar [name] IFoo (-foo [this] name))
 
 (deftest hash-test
   (testing "Basic hash coercions of EDN primitives."
@@ -40,7 +42,7 @@
     (is (= (edn-hash :core/test)
            '(66 -96 -109 23 -80 12 -115 -96 -98 80 38 -101 50 107 39 10 10 -29 98 106)))
 
-    (is (= (edn-hash (read-string "#uuid \"242525f1-8ed7-5979-9232-6992dd1e11e4\""))
+    (is (= (edn-hash  #uuid "242525f1-8ed7-5979-9232-6992dd1e11e4")
            '(-19 -9 47 46 126 -118 -46 -65 -71 -101 -26 -4 80 -120 -2 -29 60 16 -51 -69)))
 
     (is (= (edn-hash (java.util.Date. 1000000000000))
@@ -60,8 +62,10 @@
            '(71 88 -9 109 68 7 -47 86 -3 84 -57 61 69 49 -58 26 -22 55 -22 -107)))
 
     (is (= (edn-hash #{1 2 3 4})
-           '(103 23 -84 -86 51 89 46 111 17 -38 15 44 111 -121 120 -14 -72 35 -110 -114)))))
+           '(103 23 -84 -86 51 89 46 111 17 -38 15 44 111 -121 120 -14 -72 35 -110 -114)))
 
+    (is (= (edn-hash (Bar. "hello"))
+           '(-93 67 -94 -104 -69 13 -64 108 -88 -121 40 126 -4 82 15 48 -83 -38 -52 53)))))
 
 
 (deftest padded-coercion

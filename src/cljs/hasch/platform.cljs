@@ -1,5 +1,7 @@
 (ns hasch.platform
+  (:refer-clojure :exclude [replace])
   (:require [goog.crypt.Sha1]
+            [clojure.string :refer [replace]]
             [hasch.benc :refer [IHashCoercion -coerce magics padded-coerce]]))
 
 #_(do
@@ -154,35 +156,32 @@ Our hash version is coded in first 2 bits."
                                                 (encode (name this))))
                                 (:keyword magics)))
 
-  cljs.core/EmptyList
-  (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
-                                         (:seq magics))))
+  default
+  (-coerce [this hash-fn]
+    (cond (satisfies? ISeq this)
+          (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
+                         (:seq magics)))
 
-  cljs.core/List
-  (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
-                                         (:seq magics))))
+          (satisfies? IVector this)
+          (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
+                         (:vector magics)))
 
-  cljs.core/Cons
-  (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
-                                         (:seq magics))))
+          ;; implements IMap as well, so needs to be before IMap
+          (satisfies? IRecord this)
+          ;; HACK to make consistent with Clojure...
+          (hash-fn (concat (encode (replace (replace (pr-str (type this)) "/" "." ) "-" "_"))
+                           (padded-coerce (into {} this) hash-fn)))
 
-  cljs.core/PersistentVector
-  (-coerce [this hash-fn] (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
-                                         (:vector magics))))
+          (satisfies? IMap this)
+          (hash-fn (conj (padded-coerce this hash-fn)
+                         (:map magics)))
 
-  cljs.core/PersistentArrayMap
-  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
-                                         (:map magics))))
+          (satisfies? ISet this)
+          (hash-fn (conj (padded-coerce this hash-fn)
+                         (:set magics)))
 
-  cljs.core/PersistentHashMap
-  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
-                                         (:map magics))))
-
-  cljs.core/PersistentHashSet
-  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
-                                         (:set magics)))))
-
-
+          :else
+          (throw "Hashing not supported for:" this))))
 
 
 (defn boolean? [val]
