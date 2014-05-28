@@ -1,8 +1,17 @@
 (ns hasch.platform
   "Platform specific implementations."
-  (:require [hasch.benc :refer :all])
+  (:require [hasch.benc :refer :all]
+            [clojure.edn :as edn])
   (:import java.security.MessageDigest
            java.nio.ByteBuffer))
+
+
+(defn as-value
+  "Transforms runtime specific records by printing and reading with a default tagged reader."
+  [v]
+  (edn/read-string {:default (fn [tag val]
+                               (assoc val :hasch/type tag))}
+                   (pr-str v)))
 
 (defn uuid4
   "Generates a UUID version 4 (random)."

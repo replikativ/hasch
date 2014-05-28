@@ -1,7 +1,7 @@
 (ns ^:shared hasch.core
   "Hashing functions for EDN."
   (:require [hasch.benc :refer [IHashCoercion -coerce benc magics padded-coerce]]
-            [hasch.platform :refer [boolean? date?]]))
+            [hasch.platform :refer [boolean? date? as-value]]))
 
 (def uuid4 hasch.platform/uuid4)
 (def uuid5 hasch.platform/uuid5)
@@ -26,7 +26,7 @@
   "Hash an edn value with SHA-1 by default or a compatible hash function of choice."
   ([val] (edn-hash val sha-1))
   ([val hash-fn]
-     (let [coercion (map byte (-coerce val hash-fn))]
+     (let [coercion (map byte (-coerce (as-value val) hash-fn))]
        (if (atomic? val)
          (hash-fn coercion)
          coercion))))
