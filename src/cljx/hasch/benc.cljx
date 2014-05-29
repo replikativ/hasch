@@ -16,7 +16,8 @@
              :seq -107
              :vector -108
              :map -109
-             :set -110})
+             :set -110
+             :literal -111})
 
 
 (defn benc

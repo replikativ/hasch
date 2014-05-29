@@ -10,7 +10,7 @@
   "Transforms runtime specific records by printing and reading with a default tagged reader."
   [v]
   (edn/read-string {:default (fn [tag val]
-                               (assoc val :hasch/type tag))}
+                               [(:literal magics) tag val])}
                    (pr-str v)))
 
 (defn uuid4

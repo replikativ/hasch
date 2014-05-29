@@ -1,8 +1,7 @@
 (ns hasch.platform
-  (:refer-clojure :exclude [replace])
   (:require [goog.crypt.Sha1]
             [cljs.reader :as reader]
-            [clojure.string :refer [replace]]
+            [clojure.string]
             [hasch.benc :refer [IHashCoercion -coerce magics padded-coerce]]))
 
 #_(do
@@ -14,11 +13,16 @@
 (defn as-value
   "Transforms runtime specific records by printing and reading with a default tagged reader."
   [v]
-  (binding [;; TODO rebind reader/*tag-table*, contains private fns atm.
+  (binding [reader/*tag-table* (atom (select-keys @reader/*tag-table*
+                                                  #{"inst" "uuid" "queue" "js"}))
             reader/*default-data-reader-fn*
             (atom (fn [tag val]
-                    (assoc val :hasch/type tag)))]
+                    [(:literal magics) (symbol
+                                        (clojure.string/replace
+                                         (clojure.string/replace (pr-str tag) "/" ".")
+                                         "-" "_")) val]))]
     (reader/read-string (pr-str v))))
+
 
 ;; taken from https://github.com/whodidthis/cljs-uuid-utils/blob/master/src/cljs_uuid_utils.cljs
 ;; Copyright (C) 2012 Frank Siebenlist
