@@ -1,6 +1,6 @@
 # hasch
 
-A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript, e.g. with SHA-1. Commutative data structures like maps and sets are not hashed in order as was the case with e.g. hashing a simple printed edn string, but have the same hash value independent of order. UTF-8 is supported for strings, symbols and keywords.
+A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript, e.g. with SHA-1. Commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple printed edn string, but have the same hash value independent of order. UTF-8 is supported for strings, symbols and keywords.
 You can also create UUID5 (using SHA-1) from it. Alternatively you can use your own hash function.
 
 Support for edn types on the JVM and JavaScript is complete including records. The library is tested in cross-platform prototypes, but still very young, don't rely on it for strong consistency yet.
@@ -29,6 +29,8 @@ Then you can access the major function through `hash.core`:
 ~~~
 
 # Extensions
+
+In general you *should not* need this, `edn` is a sufficient to store any kind of object and demands that all serialisations are readable by the default reader. If you derive, you are not generating general hashes anymore.
 
 REMEMBER THAT BREAKING THE HASH FUNCTION PROBABLY BREAKS YOUR STORED DATA!
 
