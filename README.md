@@ -10,10 +10,10 @@ Support for edn types on the JVM and JavaScript is complete including records. T
 Include in your `project.clj` for Leiningen 2+ with:
 
 ~~~clojure
-[net.polyc0l0r/hash "0.1.0"]
+[net.polyc0l0r/hasch "0.1.0"]
 ~~~
 
-Then you can access the major function through `hash.core`:
+Then you can access the major function through `hasch.core`:
 
 ~~~clojure
 (use 'hasch.core)
