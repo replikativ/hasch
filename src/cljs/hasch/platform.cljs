@@ -14,7 +14,7 @@
   "Transforms runtime specific records by printing and reading with a default tagged reader."
   [v]
   (binding [reader/*tag-table* (atom (select-keys @reader/*tag-table*
-                                                  #{"inst" "uuid" "queue" "js"}))
+                                                  #{"inst" "uuid" "queue"}))
             reader/*default-data-reader-fn*
             (atom (fn [tag val]
                     [(:literal magics) (symbol
