@@ -1,4 +1,4 @@
-(defproject net.polyc0l0r/hasch "0.2.0-SNAPSHOT"
+(defproject net.polyc0l0r/hasch "0.2.0"
   :description "Cryptographic hashing of EDN datastructures."
   :url "http://github.com/ghubber/hasch"
   :license {:name "Eclipse Public License"
@@ -7,7 +7,7 @@
                  [org.clojure/clojurescript "0.0-2202"]]
   :source-paths ["src/clj" "src/cljs"]
   :plugins [[lein-cljsbuild "1.0.3"]
-            [com.keminglabs/cljx "0.3.2"]
+            [com.keminglabs/cljx "0.4.0"]
             [com.cemerick/austin "0.1.4"]]
 
   :hooks [cljx.hooks]
