@@ -10,7 +10,7 @@ Support for edn types on the JVM and JavaScript is complete including records. T
 Include in your `project.clj` for Leiningen 2+ with:
 
 ~~~clojure
-[net.polyc0l0r/hasch "0.2.0"]
+[net.polyc0l0r/hasch "0.2.1"]
 ~~~
 
 Then you can access the major function through `hasch.core`:
@@ -27,6 +27,9 @@ Then you can access the major function through `hasch.core`:
 (uuid) => #uuid "a27dfbb9-b69a-4f08-8df4-471464bfeb37"
 (uuid "hello world") => #uuid "09c1649c-40c3-51cc-829c-dc781de2eda0"
 ~~~
+
+# Changes
+- 0.2.1 fix tag coercion on JVM
 
 # TODO
 - Automate tests in js (with cljx?).
