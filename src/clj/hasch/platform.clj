@@ -9,11 +9,7 @@
 (defn as-value
   "Transforms runtime specific records by printing and reading with a default tagged reader."
   [v]
-  (edn/read-string {:default (fn [tag val]
-                               [(:literal magics) (symbol
-                                                   (clojure.string/replace
-                                                    (clojure.string/replace (pr-str tag) "/" ".")
-                                                    "-" "_")) val])}
+  (edn/read-string {:default (fn [tag val] [(:literal magics) (symbol (pr-str tag)) val])}
                    (pr-str v)))
 
 (defn uuid4

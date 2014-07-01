@@ -3,14 +3,14 @@
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript, e.g. with SHA-1. Commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple printed edn string, but have the same hash value independent of order. UTF-8 is supported for strings, symbols and keywords.
 You can also create UUID5 (using SHA-1) from it. Alternatively you can use your own hash function.
 
-Support for edn types on the JVM and JavaScript is complete including records. The library is tested in cross-platform prototypes, but still very young, don't rely on it for strong consistency yet. The hashing scheme is stable now, but a breaking adjustment might still be necessary.
+Support for edn types on the JVM and JavaScript is complete including records. The library is tested in cross-platform prototypes, but still very young and alpha-status, don't rely on it for strong consistency yet. The hashing scheme is stable now, but a breaking adjustment might still be necessary.
 
 ## Usage
 
 Include in your `project.clj` for Leiningen 2+ with:
 
 ~~~clojure
-[net.polyc0l0r/hasch "0.2.1"]
+[net.polyc0l0r/hasch "0.2.2"]
 ~~~
 
 Then you can access the major function through `hasch.core`:
@@ -29,6 +29,7 @@ Then you can access the major function through `hasch.core`:
 ~~~
 
 # Changes
+- 0.2.2 cannot coerce record tags because of conflicts, rather extend record to properly print
 - 0.2.1 fix tag coercion on JVM
 
 # TODO

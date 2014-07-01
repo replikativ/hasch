@@ -17,10 +17,7 @@
                                                   #{"inst" "uuid" "queue"}))
             reader/*default-data-reader-fn*
             (atom (fn [tag val]
-                    [(:literal magics) (symbol
-                                        (clojure.string/replace
-                                         (clojure.string/replace (pr-str tag) "/" ".")
-                                         "-" "_")) val]))]
+                    [(:literal magics) (symbol (pr-str tag)) val]))]
     (reader/read-string (pr-str v))))
 
 
