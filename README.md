@@ -3,14 +3,16 @@
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript, e.g. with SHA-1. Commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple printed edn string, but have the same hash value independent of order. UTF-8 is supported for strings, symbols and keywords.
 You can also create UUID5 (using SHA-1) from it. Alternatively you can use your own hash function.
 
-Support for edn types on the JVM and JavaScript is complete including records. The library is tested in cross-platform prototypes, but still very young and alpha-status, don't rely on it for strong consistency yet. The hashing scheme is stable now, but a breaking adjustment might still be necessary.
+Support for edn types on the JVM and JavaScript is complete including records. This works by printing the tagged-literal an rereading it as pure edn, which also ensures that the hashed value can be reproduced beyond the current runtime. You can avoid that by extending the `IHashCoercion` protocol to your types. You should orient on the `IRecord` implementation and use `(:literal magics)` to avoid collisions with literal values of the same form.
+
+The library is tested in cross-platform prototypes, but still very young and alpha-status, don't rely on it for strong consistency yet. The hashing scheme is stable now, but a breaking adjustment might still be necessary.
 
 ## Usage
 
 Include in your `project.clj` for Leiningen 2+ with:
 
 ~~~clojure
-[net.polyc0l0r/hasch "0.2.2"]
+[net.polyc0l0r/hasch "0.2.3"]
 ~~~
 
 Then you can access the major function through `hasch.core`:
@@ -29,14 +31,15 @@ Then you can access the major function through `hasch.core`:
 ~~~
 
 # Changes
+- 0.2.3 properly dispatch on IRecord (instead of IMap)
 - 0.2.2 cannot coerce record tags because of conflicts, rather extend record to properly print
 - 0.2.1 fix tag coercion on JVM
 
 # TODO
-- Automate tests in js (with cljx?).
+- Cover serialisation (reading) exceptions for records.
 - Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a peristent data-structure tree by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [geschichte](https://github.com/ghubber/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
 - Use test.check/double.check property based tests.
-- Profile for performance. Maybe avoid full pr-str/read-string and only apply to records...
+- Profile for performance. 
 
 ## License
 

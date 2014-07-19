@@ -1,8 +1,12 @@
-(ns hasch.core-test
-  (:require [clojure.test :refer [deftest testing is]]
-            [hasch.core :refer [edn-hash uuid]]
+(ns hasch.test
+  (:require [hasch.core :refer [edn-hash uuid]]
             [hasch.platform :refer [uuid5 sha-1 hash->str as-value]]
-            [hasch.benc :refer [padded-coerce]]))
+            [hasch.benc :refer [padded-coerce]]
+            #+clj  [clojure.test :as t
+                    :refer (is deftest with-test run-tests testing)]
+            #+cljs [cemerick.cljs.test :as t])
+  #+cljs (:require-macros [cemerick.cljs.test
+                           :refer (is deftest with-test run-tests testing test-var)]))
 
 (defprotocol IFoo
   (-foo [this]))
@@ -18,7 +22,8 @@
                       :obj (Bar. "hello")})
            {:foo :bar,
             :hasch.test/one 'sym,
-            :obj [-111 'hasch.core_test.Bar {:name "hello"}]}))))
+            :obj ['hasch.test.Bar
+                  {:name "hello"}]}))))
 
 
 
@@ -58,7 +63,7 @@
     (is (= (edn-hash  #uuid "242525f1-8ed7-5979-9232-6992dd1e11e4")
            '(-19 -9 47 46 126 -118 -46 -65 -71 -101 -26 -4 80 -120 -2 -29 60 16 -51 -69)))
 
-    (is (= (edn-hash (java.util.Date. 1000000000000))
+    (is (= (edn-hash (#+clj java.util.Date. #+cljs js/Date. 1000000000000))
            '(-1 -47 18 -67 -42 3 58 -67 67 44 -79 -96 81 2 -48 -32 46 48 -8 -128)))
 
     (is (= (edn-hash 'core/+)
@@ -78,7 +83,7 @@
            '(103 23 -84 -86 51 89 46 111 17 -38 15 44 111 -121 120 -14 -72 35 -110 -114)))
 
     (is (= (edn-hash (Bar. "hello"))
-           '(91 114 35 -7 59 120 21 -9 -36 -22 -108 11 75 101 -81 -2 85 -18 25 27)))))
+           '(90 -25 -116 -13 91 -123 44 -25 -91 -88 26 -76 -110 40 96 -78 -7 65 -106 -25)))))
 
 
 (deftest padded-coercion
@@ -113,3 +118,7 @@
     (def repl-env (reset! cemerick.austin.repls/browser-repl-env
                          (cemerick.austin/repl-env)))
     (cemerick.austin.repls/cljs-repl repl-env))
+
+
+
+;; #<IllegalStateException java.lang.IllegalStateException: CRITICAL: Fetched trans ID: 197bf9d9-1edf-5a11-b4d9-e3ce09d58556 does not match HASH 23c147d1-35d5-5ae3-bfcf-50ac151f6bba for value #datascript/DB {:schema {:down-votes {:db/cardinality :db.cardinality/many}, :arguments {:db/cardinality :db.cardinality/many}, :up-votes {:db/cardinality :db.cardinality/many}, :hashtags {:db/cardinality :db.cardinality/many}, :posts {:db/cardinality :db.cardinality/many}}, :datoms []} from CLIENT-PEER>

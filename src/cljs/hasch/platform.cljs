@@ -16,8 +16,7 @@
   (binding [reader/*tag-table* (atom (select-keys @reader/*tag-table*
                                                   #{"inst" "uuid" "queue"}))
             reader/*default-data-reader-fn*
-            (atom (fn [tag val]
-                    [(:literal magics) (symbol (pr-str tag)) val]))]
+            (atom (fn [tag val] [tag val]))]
     (reader/read-string (pr-str v))))
 
 
@@ -109,10 +108,11 @@ for an input sequence in the same encoding."
 
 
 (defn encode [input]
-  (->> input
-       utf8
-       (map signed-byte)
-       (mapcat benc)))
+  (when input
+    (->> input
+         utf8
+         (map signed-byte)
+         (mapcat benc))))
 
 #_(encode "小鳩ちゃんかわいいなぁ")
 
@@ -156,19 +156,24 @@ Our hash version is coded in first 2 bits."
 
   cljs.core/Symbol
   (-coerce [this hash-fn] (conj (mapcat benc
-                                        (concat (encode (or (namespace this) ""))
+                                        (concat (encode (namespace this))
                                                 (encode (name this))))
                                 (:symbol magics)))
 
   cljs.core/Keyword
   (-coerce [this hash-fn] (conj (mapcat benc
-                                        (concat (encode (or (namespace this) ""))
+                                        (concat (encode (namespace this))
                                                 (encode (name this))))
                                 (:keyword magics)))
 
   default
   (-coerce [this hash-fn]
-    (cond (satisfies? ISeq this)
+    (cond (satisfies? IRecord this)
+          (let [[tag val] (as-value this)]
+            (hash-fn (conj (concat (-coerce tag hash-fn) (-coerce val hash-fn))
+                           (:literal magics))))
+
+          (satisfies? ISeq this)
           (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
                          (:seq magics)))
 
@@ -185,7 +190,9 @@ Our hash version is coded in first 2 bits."
                          (:set magics)))
 
           :else
-          (throw "Hashing not supported for:" this))))
+          (let [[tag val] (as-value this)]
+            (hash-fn (conj (concat (-coerce tag hash-fn) (-coerce val hash-fn))
+                           (:literal magics)))))))
 
 
 (defn boolean? [val]

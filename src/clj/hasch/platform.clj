@@ -9,7 +9,7 @@
 (defn as-value
   "Transforms runtime specific records by printing and reading with a default tagged reader."
   [v]
-  (edn/read-string {:default (fn [tag val] [(:literal magics) (symbol (pr-str tag)) val])}
+  (edn/read-string {:default (fn [tag val] [tag val])}
                    (pr-str v)))
 
 (defn uuid4
@@ -123,12 +123,24 @@ Our hash version is coded in first 2 bits."
                                          (:vector magics))))
 
   clojure.lang.IPersistentMap
-  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
-                                         (:map magics))))
+  (-coerce [this hash-fn]
+    (if (record? this)
+      (let [[tag val] (as-value this)]
+        (hash-fn (conj (concat (-coerce tag hash-fn) (-coerce val hash-fn))
+                       (:literal magics))))
+      (hash-fn (conj (padded-coerce this hash-fn)
+                     (:map magics)))))
 
   clojure.lang.IPersistentSet
-  (-coerce [this hash-fn] (hash-fn (conj (padded-coerce this hash-fn)
-                                         (:set magics)))))
+  (-coerce [this hash-fn]
+    (hash-fn (conj (padded-coerce this hash-fn)
+                   (:set magics))))
+
+  java.lang.Object
+  (-coerce [this hash-fn]
+    (let [[tag val] (as-value this)]
+      (hash-fn (conj (concat (-coerce tag hash-fn) (-coerce val hash-fn))
+                     (:literal magics))))))
 
 
 (defn boolean? [val]
