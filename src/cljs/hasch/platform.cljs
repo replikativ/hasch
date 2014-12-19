@@ -43,11 +43,23 @@
        (f) (f) (f) (f) (f) (f) (f) (f) (f) (f) (f) (f))))))
 
 
-(defn sha-1
+
+(let [md (goog.crypt.Sha1.)]
+  (defn sha-1
   "Return a SHA-1 hash in signed byte encoding
-for an input sequence in the same encoding."
+  for an input sequence in the same encoding."
+    [token bytes-or-seq-of-bytes]
+    (.reset md)
+    (.update md (byte-array 1 token))
+    (if-not (satisfies? ISeq bytes-or-seq-of-bytes) ;; TODO?
+      (.update md bytes-or-seq-of-bytes)
+      (doseq [bs bytes-or-seq-of-bytes]
+        (.update md bs)))
+    (.digest md)))
+
+(defn sha-1
   [bytes]
-  (let [md (goog.crypt.Sha1.)
+  (let [md
         sarr (into-array (map #(if (neg? %) (+ % 256) %) bytes))]
     (.update md sarr)
     (map #(if (> % 127)
@@ -65,12 +77,6 @@ for an input sequence in the same encoding."
 
 (defn hash->str [bytes]
   (apply str (map byte->hex bytes)))
-
-
-(defn benc [n]
-  (if (< n -98)
-    (list -98 (+ n 98))
-    (list n)))
 
 
 ;; taken from http://jsperf.com/uint8array-vs-array-encode-to-utf8/2
@@ -189,19 +195,12 @@ Our hash version is coded in first 2 bits."
           (hash-fn (conj (padded-coerce this hash-fn)
                          (:set magics)))
 
+          ;; TODO
+          #_(instance? js/UInt8Array this)
+          #_(hash-fn (conj (mapcat benc this)
+                         (:binary magics)))
+
           :else
           (let [[tag val] (as-value this)]
             (hash-fn (conj (concat (-coerce tag hash-fn) (-coerce val hash-fn))
                            (:literal magics)))))))
-
-
-(defn boolean? [val]
-  (= (type val) js/Boolean))
-
-
-(defn uuid? [val]
-  (= (type val) cljs.core.UUID))
-
-
-(defn date? [val]
-  (= (type val) js/Date))

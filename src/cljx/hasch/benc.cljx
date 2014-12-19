@@ -1,48 +1,38 @@
 (ns ^:shared hasch.benc
   "Binary encoding of EDN values.")
 
+(set! *warn-on-reflection* true)
+
 (defprotocol IHashCoercion
-  (-coerce [this hash-fn]))
+  (-coerce [this resetable-md md-create-fn]))
 
 ;; changes break hashes!
-(def magics {:nil -99
-             :boolean -100
-             :number -101
-             :string -102
-             :symbol -103
-             :keyword -104
-             :inst -105
-             :uuid -106
-             :seq -107
-             :vector -108
-             :map -109
-             :set -110
-             :literal -111})
-
-
-(defn benc
-  "Dumb binary encoding which ensures basic types (incl. collections)
-cannot collide with different content. MAY NOT CHANGE OR BREAKS HASHES."
-  [x]
-  (let [b (byte x)]
-    (if (< b -98)
-      (list -98 (+ b 98))
-      (list b))))
+(def magics {:nil (byte 0)
+             :boolean (byte 1)
+             :number (byte 2)
+             :string (byte 3)
+             :symbol (byte 4)
+             :keyword (byte 5)
+             :inst (byte 6)
+             :uuid (byte 7)
+             :seq (byte 8)
+             :vector (byte 9)
+             :map (byte 10)
+             :set (byte 11)
+             :literal (byte 12)
+             :binary (byte 13)})
 
 
 (defn padded-coerce
   "Commutatively coerces elements of collection, padding ensures all bits
 are included in the hash."
-  [coll hash-fn]
-  (reduce (fn padded-xor [acc elem]
-            (let [[a b] (if (> (count acc)
-                               (count elem))
-                          [acc (concat elem (repeat (- (count acc)
-                                                       (count elem))
-                                                    0))]
-                          [(concat acc (repeat (- (count elem)
-                                                  (count acc))
-                                               0)) elem])]
-              (map bit-xor a b)))
-          '()
-          (map #(-coerce % hash-fn) (seq coll))))
+  [coll resetable-md md-create-fn encode]
+  (reduce (fn padded-xor [^bytes acc ^bytes elem]
+            (let [[^bytes a ^bytes b] (if (> (alength acc) (alength elem)) [acc elem] [elem acc])]
+              (loop [i 0]
+                (when (< i (alength b))
+                  (aset a i (byte (bit-xor (aget a i) (aget b i))))
+                  (recur (inc i))))
+              a))
+          (byte-array 0)
+          (map #(encode (:vector magics) (-coerce % resetable-md md-create-fn)) (seq coll))))

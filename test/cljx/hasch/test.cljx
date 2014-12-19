@@ -1,6 +1,6 @@
 (ns hasch.test
   (:require [hasch.core :refer [edn-hash uuid]]
-            [hasch.platform :refer [uuid5 sha-1 hash->str as-value]]
+            [hasch.platform :refer [uuid5 sha1-message-digest hash->str as-value]]
             [hasch.benc :refer [padded-coerce]]
             #+clj  [clojure.test :as t
                     :refer (is deftest with-test run-tests testing)]
@@ -8,12 +8,8 @@
   #+cljs (:require-macros [cemerick.cljs.test
                            :refer (is deftest with-test run-tests testing test-var)]))
 
-(defprotocol IFoo
-  (-foo [this]))
 
-(defrecord Bar [name]
-  IFoo
-  (-foo [this] name))
+(defrecord Bar [name])
 
 (deftest value-generalisation
   (testing "Testing correct (de)serialisation of records (tagged literals)."
@@ -88,8 +84,8 @@
 
 (deftest padded-coercion
   (testing "Padded xor coercion for commutative collections."
-    (is (= (padded-coerce [[0xa0 0x01] [0x0c 0xf0 0x5f] [0x0a 0x30 0x07]] sha-1)
-           (padded-coerce [[0xa0 0x01] [0x0a 0x30 0x07] [0x0c 0xf0 0x5f]] sha-1)))))
+    (is (= (padded-coerce [[0xa0 0x01] [0x0c 0xf0 0x5f] [0x0a 0x30 0x07]] sha1-message-digest)
+           (padded-coerce [[0xa0 0x01] [0x0a 0x30 0x07] [0x0c 0xf0 0x5f]] sha1-message-digest)))))
 
 
 (deftest code-hashing
@@ -98,7 +94,6 @@
                   (if (or (= n 0) (= n 1)) 1
                       (+ (fib (- n 1)) (fib (- n 2)))))
                edn-hash
-               sha-1
                uuid5)
            #uuid "0640c5d1-201c-537b-9407-8b5af8883ff3"))))
 
