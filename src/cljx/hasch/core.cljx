@@ -7,8 +7,8 @@
 (def hash->str hasch.platform/hash->str)
 
 (defn edn-hash
-  "Hash an edn value with SHA-1 by default or a compatible hash function of choice."
-  ([val] (edn-hash val hasch.platform/sha1-message-digest))
+  "Hash an edn value with SHA-512 by default or a compatible hash function of choice."
+  ([val] (edn-hash val hasch.platform/sha512-message-digest))
   ([val md-create-fn]
    (let [md (md-create-fn)]
      (let [res (-coerce val md md-create-fn)]

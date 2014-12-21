@@ -4,13 +4,15 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2268"]
-                 [com.cemerick/clojurescript.test "0.3.1"]]
+                 [org.clojure/clojurescript "0.0-2268"]]
   :source-paths ["src/clj" "src/cljs"]
   :test-paths ["target/classes"]
   :plugins [[lein-cljsbuild "1.0.3"]
             [com.keminglabs/cljx "0.4.0"]
             [com.cemerick/austin "0.1.4"]]
+
+  :profiles {:dev {:dependencies [[com.cemerick/clojurescript.test "0.3.1"]
+                                  [criterium "0.4.3"]]}}
 
   :hooks [cljx.hooks]
 
@@ -30,6 +32,7 @@
                    :output-path "target/classes"
                    :rules :cljs}]}
 
+  :jvm-opts ^:replace []
 
   :cljsbuild
   {:builds

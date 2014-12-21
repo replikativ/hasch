@@ -8,9 +8,6 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:dynamic *resetable-digest* nil)
-
-
 (defn as-value ;; TODO maybe use transit json in memory?
   "Transforms runtime specific records by printing and reading with a default tagged reader."
   [v]
@@ -133,7 +130,8 @@ are included in the hash."
   (-coerce [this resetable-md md-create-fn]
     (let [barr (byte-array 2)]
       (aset barr 0 ^Byte (:boolean magics))
-      (aset barr 1 (if this (byte 1) (byte 0)))))
+      (aset barr 1 (if this (byte 41) (byte 40)))
+      barr))
 
   ;; don't distinguish characters from string for javascript
   java.lang.Character
@@ -239,15 +237,19 @@ are included in the hash."
 
   (map byte (-coerce #{1 2 3} (sha512-message-digest) sha512-message-digest))
 
+  (use 'criterium.core)
+
   (def million-map (into {} (doall (map vec (partition 2 ; 49 secs
-                                                       (interleave (range 2000000)
-                                                                   (range 2000000 4000000)))))))
+                                                       (interleave (range 1000000)
+                                                                   (range 1000000 2000000)))))))
 
   (def million-seq (doall (map vec (partition 2 ;; 15 secs
                                               (interleave (range 1000000)
                                                           (range 1000000 2000000))))))
 
   (def million-seq2 (doall (range 1000000))) ;; 520 ms
+
+  (take 10 (time (into (sorted-set) (range 1e7))))
 
   (def million-set (doall (into #{} (range 1000000)))) ;; 5 secs
 
@@ -257,11 +259,19 @@ are included in the hash."
 
   (def million-seq4 (doall (repeat 1000000 :foo/bar))) ;; 1.5 s
 
-  (let [;million-words (doall (repeat 1000000 "hello"))
+  (let [               ;million-words (doall (repeat 1000000 "hello"))
         resetable-md (sha512-message-digest)]
-    (time (-coerce million-map resetable-md sha512-message-digest)) ;; 14 secs
+    (bench (-coerce million-map resetable-md sha512-message-digest)) ;; 14 secs
     #_(time (hash-imap million-map) ) ;; 3 secs
     )
+
+  (let [val (into {} (doall (map vec (partition 2
+                                                (interleave (range 1000000)
+                                                            (range 1000000 2000000))))))]
+    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+
+
+  (bench (-coerce million-set (sha512-message-digest) sha512-message-digest))
 
   (defn hash-combine [seed hash]
                                         ; a la boost
@@ -293,14 +303,17 @@ are included in the hash."
   ;; if not single or few byte values, but at least 8 byte size factor per item ~12x
   ;; factor for single byte ~100x
   (def bs (apply concat (repeat 100000 (.getBytes "Hello World!"))))
-  (def barr #_(byte-array bs) (byte-array (* 1024 1024 100) (byte 42)))
+  (def barr #_(byte-array bs) (byte-array (* 1024 1024 300) (byte 42)))
   (def barrs (doall (take (* 1024 1024 10) (repeat (byte-array 1 (byte 42))))
                     #_(map byte-array (partition 1 barr))))
+
+  (bench (-coerce barr (sha512-message-digest) sha512-message-digest))
+
   (let []
-    (time (-coerce barr (sha512-message-digest) sha512-message-digest))  ;; 882 msecs
+    (time (-coerce barr (sha512-message-digest) sha512-message-digest)) ;; 882 msecs
     #_(let [md (MessageDigest/getInstance "sha-1")] ;; 350 msecs
-      (time (do (.update md barr)
-                (.digest md))))
+        (time (do (.update md barr)
+                  (.digest md))))
     #_(let [md (MessageDigest/getInstance "sha-1")]
         (time (doall (map (fn [^bytes barr]
                             (.update md barr)
@@ -320,8 +333,8 @@ are included in the hash."
                               (.update md barr2))) barrs)))
         (println (map byte (time (.digest md)))))
     #_(let [md (MessageDigest/getInstance "sha-1")] ;; 32 secs without encoding, 50 secs with
-      (time (doall (map #(.update md (encode (:binary magics) %)) barrs)))
-      (println (map byte (time (.digest md)))))
+        (time (doall (map #(.update md (encode (:binary magics) %)) barrs)))
+        (println (map byte (time (.digest md)))))
     #_(time (hash-coll barrs)) ;; 20 secs
     nil)
 
@@ -335,7 +348,4 @@ are included in the hash."
   ;; but not as cheap as on seqs
 
 
-  (def arr (into-array Byte/TYPE (take (* 1024) (repeatedly #(- (rand-int 256) 128)))))
-
-
-  )
+  (def arr (into-array Byte/TYPE (take (* 1024) (repeatedly #(- (rand-int 256) 128))))))

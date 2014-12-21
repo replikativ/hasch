@@ -60,28 +60,92 @@ The library is designed safety first, speed second. I have put quite some though
 
 ## Speed
 
-The first versions were just build around safety, but perform poorly with large values. The speed should be sufficient to be in the same order of magnitude as transmission speed (throughput + latency) over slow to mid-range internet broadband connections. If you want to transmit larger values fast, you can chose a fitting binary encoding anyway.
+The first versions were just build around safety, but perform poorly with large values. The speed should be sufficient to be in the same order of magnitude as transmission speed (throughput + latency) over slow to mid-range internet broadband connections. If you want to transmit larger values fast, you maybe can chose a sequential binary encoding.
 
-*These are just micro-benchmarks on my 3 year laptop (vs. old version), I just mention them so you can get an impression.*
+*These are just micro-benchmarks on my 3 year laptop (old version is 4-10x slower), I just mention them so you can get an impression.*
 
 ~~~clojure
-  ;; worst performance, if you have any ideas...
-  (def million-map (into {} (doall (map vec (partition 2 ; 14 s / 45 s
-                                                       (interleave (range 1000000)
-                                                                   (range 1000000 2000000)))))))
+;; most important and worst case, what can be done?
+hasch.platform> (let [val (into {} (doall (map vec (partition 2
+                                                (interleave (range 1000000)
+                                                            (range 1000000 2000000))))))]
+    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+Evaluation count : 60 in 60 samples of 1 calls.
+             Execution time mean : 5.691272 sec
+    Execution time std-deviation : 194.356782 ms
+   Execution time lower quantile : 5.572440 sec ( 2.5%)
+   Execution time upper quantile : 6.304907 sec (97.5%)
+                   Overhead used : 1.967460 ns
 
-  (def million-seq2 (doall (range 1000000))) ;; 520 ms / 15 s
+Found 4 outliers in 60 samples (6.6667 %)
+	low-severe	 1 (1.6667 %)
+	low-mild	 3 (5.0000 %)
+ Variance from outliers : 20.6184 % Variance is moderately inflated by outliers
+nil
+hasch.platform> (let [val (doall (range 1000000))]
+    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+Evaluation count : 240 in 60 samples of 4 calls.
+             Execution time mean : 269.192864 ms
+    Execution time std-deviation : 13.568064 ms
+   Execution time lower quantile : 264.196463 ms ( 2.5%)
+   Execution time upper quantile : 290.258534 ms (97.5%)
+                   Overhead used : 1.967460 ns
 
-  (def million-set (doall (into #{} (range 1000000)))) ;; 5 s / 10 s
+Found 8 outliers in 60 samples (13.3333 %)
+	low-severe	 4 (6.6667 %)
+	low-mild	 4 (6.6667 %)
+ Variance from outliers : 36.8270 % Variance is moderately inflated by outliers
+nil
+hasch.platform> (let [val (doall (into #{} (range 1000000)))]
+    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+Evaluation count : 60 in 60 samples of 1 calls.
+             Execution time mean : 2.307726 sec
+    Execution time std-deviation : 233.571036 ms
+   Execution time lower quantile : 2.171922 sec ( 2.5%)
+   Execution time upper quantile : 3.105212 sec (97.5%)
+                   Overhead used : 1.967460 ns
 
-  (def million-seq3 (doall (repeat 1000000 "hello"))) ;; 900 ms / 16 s
+Found 9 outliers in 60 samples (15.0000 %)
+	low-severe	 3 (5.0000 %)
+	low-mild	 6 (10.0000 %)
+ Variance from outliers : 70.3610 % Variance is severely inflated by outliers
+nil
+hasch.platform> (let [val (doall (repeat 1000000 "hello"))]
+    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+Evaluation count : 180 in 60 samples of 3 calls.
+             Execution time mean : 430.994775 ms
+    Execution time std-deviation : 85.018651 ms
+   Execution time lower quantile : 383.670949 ms ( 2.5%)
+   Execution time upper quantile : 652.204588 ms (97.5%)
+                   Overhead used : 1.967460 ns
 
-  (def million-seq4 (doall (repeat 1000000 :foo))) ;; 1 s / 8 s
+Found 11 outliers in 60 samples (18.3333 %)
+	low-severe	 11 (18.3333 %)
+ Variance from outliers : 91.1043 % Variance is severely inflated by outliers
+nil
+hasch.platform> (let [val (doall (repeat 1000000 :foo/bar))]
+    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+WARNING: Final GC required 1.0538668933601911 % of runtime
+Evaluation count : 60 in 60 samples of 1 calls.
+             Execution time mean : 967.548623 ms
+    Execution time std-deviation : 245.052748 ms
+   Execution time lower quantile : 637.265154 ms ( 2.5%)
+   Execution time upper quantile : 1.273569 sec (97.5%)
+                   Overhead used : 1.967460 ns
+nil
+hasch.platform> (let [val (byte-array (* 1024 1024 300) (byte 42))] ;; 300 mib bytearray
+    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+Evaluation count : 60 in 60 samples of 1 calls.
+             Execution time mean : 1.987549 sec
+    Execution time std-deviation : 134.189868 ms
+   Execution time lower quantile : 1.901676 sec ( 2.5%)
+   Execution time upper quantile : 2.304744 sec (97.5%)
+                   Overhead used : 1.967460 ns
 
-  (def million-seq5 (doall (repeat 1000000 :foo/bar))) ;; 1.5 s / 13 s
-
-  ;; 100 megabyte binary (native performance)
-  (def barr (byte-array (* 1024 1024 100) (byte 42))) ;; 1 sec / _
+Found 3 outliers in 60 samples (5.0000 %)
+	low-severe	 3 (5.0000 %)
+ Variance from outliers : 50.1416 % Variance is severely inflated by outliers
+nil
 
 ~~~
 
