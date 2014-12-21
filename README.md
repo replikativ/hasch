@@ -47,6 +47,10 @@ The motivation is to exchange (potentially large) values in a hostile environmen
 
 I wish I could have done that instead of reimplementing my own hashing scheme for edn (there are more interesting problems). There is one major reason against using internal hash functions: They need to be very fast for efficient data-structures and hence trade this for potential but unlike collisions, which is unacceptable in an unsecure environment. For the same reason they also only work on 64 bit values, which is fine for a runtime, but not the internet.
 
+## Why not sort?
+
+This can be done, but in my benchmarks sorting took the same time as the complete hashing with xor, so it was slower and it does not scale linearly. It also needs double the memory to create the sorted collection.
+
 ## edn support
 
 Support for edn types on the JVM (but not yet JavaScript) is complete including records. This works by printing the tagged-literal and rereading it as pure edn, which also ensures that the hashed value can be reproduced beyond the current runtime. Your type has to be pr-str-able for this to work. Records already have a default serialisation.
@@ -56,11 +60,11 @@ Support for edn types on the JVM (but not yet JavaScript) is complete including 
 
 The library is designed safety first, speed second. I have put quite some thought into getting all input bits (entropy) into the cryptographic hash function. It should be impossible to construct a collision (beyond weaknesses in the underlying SHA-512 which is considered safe in year 2014). The biggest conceptual weakness is XOR-ing of sha-512 hashed elements in maps and sets.
 
-*Once released, I'll offer a 100 $ bounty for proof of any collision, just open a github issue. For implementation bugs, I'll send you special sweets from Mannheim. :-)*
+*Once released, I'll offer a 100 $ bounty for proof of any collision, just open a github issue. This hashing is an important building block for distributed systems to me.*
 
 ## Speed
 
-The first versions were just build around safety, but perform poorly with large values. The speed should be sufficient to be in the same order of magnitude as transmission speed (throughput + latency) over slow to mid-range internet broadband connections. If you want to transmit larger values fast, you maybe can chose a sequential binary encoding.
+The first versions were just build around safety, but perform poorly with large values. The speed should be sufficient to be in the same order of magnitude as transmission speed (throughput + latency) over slow to mid-range internet broadband connections. If you want to transmit larger values fast, you maybe can chose a sequential binary encoding with native hashing speed.
 
 *These are just micro-benchmarks on my 3 year laptop (old version is 4-10x slower), I just mention them so you can get an impression.*
 
@@ -82,6 +86,7 @@ Found 4 outliers in 60 samples (6.6667 %)
 	low-mild	 3 (5.0000 %)
  Variance from outliers : 20.6184 % Variance is moderately inflated by outliers
 nil
+
 hasch.platform> (let [val (doall (range 1000000))]
     (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
 Evaluation count : 240 in 60 samples of 4 calls.
@@ -96,6 +101,7 @@ Found 8 outliers in 60 samples (13.3333 %)
 	low-mild	 4 (6.6667 %)
  Variance from outliers : 36.8270 % Variance is moderately inflated by outliers
 nil
+
 hasch.platform> (let [val (doall (into #{} (range 1000000)))]
     (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
 Evaluation count : 60 in 60 samples of 1 calls.
@@ -110,6 +116,7 @@ Found 9 outliers in 60 samples (15.0000 %)
 	low-mild	 6 (10.0000 %)
  Variance from outliers : 70.3610 % Variance is severely inflated by outliers
 nil
+
 hasch.platform> (let [val (doall (repeat 1000000 "hello"))]
     (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
 Evaluation count : 180 in 60 samples of 3 calls.
@@ -123,6 +130,7 @@ Found 11 outliers in 60 samples (18.3333 %)
 	low-severe	 11 (18.3333 %)
  Variance from outliers : 91.1043 % Variance is severely inflated by outliers
 nil
+
 hasch.platform> (let [val (doall (repeat 1000000 :foo/bar))]
     (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
 WARNING: Final GC required 1.0538668933601911 % of runtime
@@ -133,6 +141,7 @@ Evaluation count : 60 in 60 samples of 1 calls.
    Execution time upper quantile : 1.273569 sec (97.5%)
                    Overhead used : 1.967460 ns
 nil
+
 hasch.platform> (let [val (byte-array (* 1024 1024 300) (byte 42))] ;; 300 mib bytearray
     (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
 Evaluation count : 60 in 60 samples of 1 calls.
