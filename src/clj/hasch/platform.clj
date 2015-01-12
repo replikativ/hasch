@@ -32,17 +32,19 @@
 
 (defn ^bytes encode [^Byte magic ^bytes a]
   (let [len (long (alength a))
-        ea (byte-array (inc (* len 2)))]
+        ea (byte-array (inc len))]
     (aset ea 0 magic)
     (loop [i 0]
       (when-not (= i len)
         (let [e (aget a i)]
-          (aset ea (inc (* i 2)) e)
           (when (and (> e (byte 0))
                      (< e (byte 30)))
-            (aset ea (+ (* i 2) 2) e)))
-      (recur (inc i))))
-    ea))
+            (aset ea (inc i) (byte 1))))
+        (recur (inc i))))
+    (let [out (ByteArrayOutputStream.)]
+      (.write out a)
+      (.write out ea)
+      (.toByteArray out))))
 
 (defn sha512-message-digest []
   (MessageDigest/getInstance "sha-512"))
@@ -110,8 +112,8 @@ Our hash version is coded in first 2 bits."
   (encode (:binary magics) sha512-unsigned-hash-bytes-digest))
 
 (defn padded-coerce
-  "Commutatively coerces elements of collection, padding ensures all bits
-are included in the hash."
+  "Commutatively coerces elements of collection, seq entries should be crypto hashed
+  to avoid collisions in XOR."
   [seq resetable-md md-create-fn]
   (let [len (count (first seq))]
     (reduce (fn padded-xor [^bytes acc ^bytes elem]
@@ -160,7 +162,7 @@ are included in the hash."
   (-coerce [this resetable-md md-create-fn] (encode (:uuid magics) (.getBytes (str this) "UTF-8")))
 
   java.util.Date
-  (-coerce [this resetable-md md-create-fn] (encode (:inst magics) (.getBytes (str (.getTime this)))))
+  (-coerce [this resetable-md md-create-fn] (encode-number (:inst magics) (.getTime this)))
 
   nil
   (-coerce [this resetable-md md-create-fn] (encode (:nil magics) (byte-array 0)))
@@ -230,8 +232,6 @@ are included in the hash."
 
 
 
-
-
 (comment
   (map byte (-coerce {:hello :world :foo :bar 1 2} (sha512-message-digest) sha512-message-digest))
 
@@ -239,29 +239,56 @@ are included in the hash."
 
   (use 'criterium.core)
 
-  (def million-map (into {} (doall (map vec (partition 2 ; 49 secs
+  (def million-map (into {} (doall (map vec (partition 2 ; 4 secs
                                                        (interleave (range 1000000)
                                                                    (range 1000000 2000000)))))))
 
-  (def million-seq (doall (map vec (partition 2 ;; 15 secs
+  (def million-seq (doall (map vec (partition 2 ;; 1.1 secs
                                               (interleave (range 1000000)
                                                           (range 1000000 2000000))))))
 
-  (def million-seq2 (doall (range 1000000))) ;; 520 ms
+  (def million-seq2 (doall (range 1000000))) ;; 275 ms
 
   (take 10 (time (into (sorted-set) (range 1e7))))
 
-  (def million-set (doall (into #{} (range 1000000)))) ;; 5 secs
+  (def million-set (doall (into #{} (range 1000000)))) ;; 2.7 secs
 
-  (def million-seq3 (doall (repeat 1000000 "hello"))) ;; 900 ms
+  (def million-seq3 (doall (repeat 1000000 "hello world"))) ;; 660 msecs
 
-  (def million-seq4 (doall (repeat 1000000 :foo))) ;; 1 s
+  (def million-seq4 (doall (repeat 1000000 :foo/bar))) ;; 700 msecs
 
-  (def million-seq4 (doall (repeat 1000000 :foo/bar))) ;; 1.5 s
+  (count (pr-str {:db/id 18239
+                  :person/name "Frederic"
+                  :person/familyname "Johanson"
+                  :person/street "Fifty-First Street 53"
+                  :person/postal 38237
+                  :person/telefon "02343248474"
+                  :person/weeight 0.3823}))
+
+  (def datom-vector (doall (vec (repeat 10000 {:db/id 18239
+                                               :person/name "Frederic"
+                                               :person/familyname "Johanson"
+                                               :person/street "Fifty-First Street 53"
+                                               :person/postal 38237
+                                               :person/telefon "02343248474"
+                                               :person/weeight 0.3823}))))
+
+  (bench (-coerce datom-vector (sha512-message-digest) sha512-message-digest)) ;; 800 ms
+
+  (time (r/fold (fn ([] (byte-array 128))
+                  ([^bytes acc ^bytes elem]
+                   (loop [i 0]
+                     (when (< i 128)
+                       (aset acc i (byte (bit-xor (aget acc i) (aget elem i))))
+                       (recur (inc i))))
+                   acc))
+                (fn [_ k v]
+                  (-coerce [k v] (sha512-message-digest) sha512-message-digest))
+                million-map))
 
   (let [               ;million-words (doall (repeat 1000000 "hello"))
         resetable-md (sha512-message-digest)]
-    (bench (-coerce million-map resetable-md sha512-message-digest)) ;; 14 secs
+    (bench (-coerce million-set resetable-md sha512-message-digest))
     #_(time (hash-imap million-map) ) ;; 3 secs
     )
 

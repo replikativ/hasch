@@ -23,7 +23,7 @@
              :binary (byte 13)})
 
 
-(defn padded-coerce
+#_(defn padded-coerce
   "Commutatively coerces elements of collection, padding ensures all bits
 are included in the hash."
   [coll resetable-md md-create-fn encode]

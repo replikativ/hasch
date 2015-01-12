@@ -1,10 +1,11 @@
 (ns hasch.core
   "Hashing functions for EDN."
-  (:require [hasch.benc :refer [IHashCoercion -coerce]]))
+  (:require [hasch.benc :refer [IHashCoercion -coerce]]
+            [hasch.platform :as platform]))
 
-(def uuid4 hasch.platform/uuid4)
-(def uuid5 hasch.platform/uuid5)
-(def hash->str hasch.platform/hash->str)
+(def uuid4 platform/uuid4)
+(def uuid5 platform/uuid5)
+(def hash->str platform/hash->str)
 
 (defn edn-hash
   "Hash an edn value with SHA-512 by default or a compatible hash function of choice."
