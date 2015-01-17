@@ -1,4 +1,4 @@
-(defproject net.polyc0l0r/hasch "0.3.0-beta1"
+(defproject net.polyc0l0r/hasch "0.3.0-beta2"
   :description "Cryptographic hashing of EDN datastructures."
   :url "http://github.com/ghubber/hasch"
   :license {:name "Eclipse Public License"

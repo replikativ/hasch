@@ -78,4 +78,4 @@
               (.write out ea)
               (.toByteArray out))
       #+cljs (.concat a ea))
-    (digest md-create-fn a)))
+    (digest a md-create-fn)))
