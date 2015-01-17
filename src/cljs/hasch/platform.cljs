@@ -2,7 +2,8 @@
   (:require [goog.crypt.Sha512]
             [cljs.reader :as reader]
             [clojure.string]
-            [hasch.benc :refer [IHashCoercion -coerce magics split-size]]))
+            [hasch.benc :refer [magics IHashCoercion -coerce
+                                digest coerce-seq xor-hashes encode-safe]]))
 
 #_(do
     (ns dev)
@@ -23,7 +24,6 @@
 ;; taken from https://github.com/whodidthis/cljs-uuid-utils/blob/master/src/cljs_uuid_utils.cljs
 ;; Copyright (C) 2012 Frank Siebenlist
 ;; Distributed under the Eclipse Public License, the same as Clojure.
-;; TODO check: might not have enough randomness in some browsers (?)
 (defn uuid4
   "(uuid4) => new-uuid
    Arguments and Values:
@@ -86,9 +86,6 @@
 
 #_(utf8 "小鳩ちゃんかわいいなぁ")
 
-(defn signed-byte [b]
-  (if (> b 127) (- b 256) b))
-
 (defn uuid5
   "Generates a uuid5 from a sha-1 hash byte sequence.
 Our hash version is coded in first 2 bits."
@@ -108,147 +105,96 @@ Our hash version is coded in first 2 bits."
 (defn sha512-message-digest []
   (goog.crypt.Sha512.))
 
-(defn- digest
-  [md bytes-or-seq-of-bytes]
-  (.reset md)
-  (if (seq? bytes-or-seq-of-bytes)
-    (doseq [bs bytes-or-seq-of-bytes]
-      (.update md bs))
-    (.update md bytes-or-seq-of-bytes))
-  (.digest md))
-
-(defn coerce-seq [resetable-md md-create-fn seq]
-  (.reset resetable-md)
-  (loop [s seq]
-    (let [f (first s)]
-      (when f
-        (.update resetable-md (-coerce f resetable-md md-create-fn))
-        (recur (rest s)))))
-  (.digest resetable-md))
-
-(comment
-  (.log js/console (coerce-seq (sha512-message-digest) sha512-message-digest '(1 2 3)))
-
-  (.log js/console (into-array (map signed-byte ))))
-
-(defn padded-coerce
-  "Commutatively coerces elements of collection, seq entries should be crypto hashed
-  to avoid collisions in XOR."
-  [seq resetable-md md-create-fn]
-  (let [len (min (long (alength (first seq))) max-entropy)]
-    (reduce (fn padded-xor [acc elem]
-              (loop [i 0]
-                (when (< i len)
-                  (aset acc i (byte (bit-xor (aget acc i) (aget elem i))))
-                  (recur (inc i))))
-              acc)
-            (into-array (repeat len 0))
-            seq)))
-
 (defn encode [magic a]
   (.concat #js [magic] a))
-
-(defn encode-safe [resetable-md a]
-  (if (< (count a) split-size)
-    (let [len (alength a)
-          ea (into-array (repeat len 0))]
-      (loop [i 0]
-        (when-not (= i len)
-          (let [e (aget a i)]
-            (when (and (> e (byte 0))
-                       (< e (byte 30)))
-              (aset ea i (byte 1))))
-          (recur (inc i))))
-      (.concat a ea))
-    (digest resetable-md a)))
 
 (defn- str->utf8 [x]
   (-> x str utf8))
 
 (extend-protocol IHashCoercion
   nil
-  (-coerce [this resetable-md md-create-fn]
+  (-coerce [this md-create-fn]
     (encode (:nil magics) #js[]))
 
   boolean
-  (-coerce [this resetable-md md-create-fn]
+  (-coerce [this md-create-fn]
     (encode (:boolean magics) #js [(if this 41 40)]))
 
   string
-  (-coerce [this resetable-md md-create-fn]
-    (encode (:string magics) (encode-safe resetable-md (str->utf8 this))))
+  (-coerce [this md-create-fn]
+    (encode (:string magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   number
-  (-coerce [this resetable-md md-create-fn]
+  (-coerce [this md-create-fn]
+    ;; utf8 is not needed, can be optimized
     (encode (:number magics) (str->utf8 this)))
 
   js/Date
-  (-coerce [this resetable-md md-create-fn]
+  (-coerce [this md-create-fn]
     ;; utf8 is not needed, can be optimized
     (encode (:inst magics) (str->utf8 (.getTime this))))
 
   cljs.core/UUID
-  (-coerce [this resetable-md md-create-fn]
+  (-coerce [this md-create-fn]
     (encode (:uuid magics) (str->utf8 (.-uuid this))))
 
   cljs.core/Symbol
-  (-coerce [this resetable-md md-create-fn]
-    (encode (:symbol magics) (encode-safe resetable-md (str->utf8 this))))
+  (-coerce [this md-create-fn]
+    (encode (:symbol magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   cljs.core/Keyword
-  (-coerce [this resetable-md md-create-fn]
-    (encode (:keyword magics) (encode-safe resetable-md (str->utf8 this))))
+  (-coerce [this md-create-fn]
+    (encode (:keyword magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   default
-  (-coerce [this resetable-md md-create-fn]
+  (-coerce [this md-create-fn]
     (cond (satisfies? IRecord this)
           (let [[tag val] (as-value this)]
-            (encode (:literal magics)
-                    (coerce-seq resetable-md
-                                md-create-fn
-                                [(-coerce tag resetable-md md-create-fn)
-                                 (-coerce val resetable-md md-create-fn)])))
+            (encode (:literal magics) (coerce-seq [tag val] md-create-fn)))
 
           (satisfies? ISeq this)
-          (encode (:seq magics) (coerce-seq resetable-md md-create-fn this))
+          (encode (:seq magics) (coerce-seq this md-create-fn))
 
           (satisfies? IVector this)
-          (encode (:vector magics) (coerce-seq resetable-md md-create-fn this))
+          (encode (:vector magics) (coerce-seq this md-create-fn))
 
           (satisfies? IMap this)
-          (encode (:map magics)
-                  (digest resetable-md
-                          (padded-coerce (map #(-coerce %
-                                                        resetable-md
-                                                        md-create-fn)
-                                              (seq this))
-                                         resetable-md
-                                         md-create-fn)))
+          (encode (:map magics) (xor-hashes (map #(-coerce % md-create-fn) (seq this))))
 
           (satisfies? ISet this)
-          (encode (:set magics)
-                  (digest resetable-md
-                          (padded-coerce (map #(digest resetable-md
-                                                       (-coerce % resetable-md md-create-fn))
-                                              (seq this))
-                                         resetable-md
-                                         md-create-fn)))
+          (encode (:set magics) (xor-hashes (map #(digest (-coerce % md-create-fn) md-create-fn)
+                                                 (seq this))))
 
-          ;; TODO
-          #_(instance? js/UInt8Array this)
-          #_(hash-fn (conj (mapcat benc this)
-                           (:binary magics)))
+          (instance? js/Uint8Array this)
+          (encode (:binary magics) (encode-safe (js/Array.prototype.slice.call this) md-create-fn))
 
           :else
           (let [[tag val] (as-value this)]
             (encode (:literal magics)
-                    (coerce-seq resetable-md
-                                md-create-fn
-                                [(-coerce tag resetable-md md-create-fn)
-                                 (-coerce val resetable-md md-create-fn)]))))))
+                    (coerce-seq [tag val] md-create-fn))))))
+
 
 
 (comment
+  (js/Array.prototype.slice.call (js/Uint8Array. #js [1 2 3]))
+  (.log js/console (-coerce (js/Uint8Array. #js [1 2 3]) (sha512-message-digest) sha512-message-digest))
+
+  (do
+    (def datom-vector (doall (vec (repeat 10000 {:db/id 18239
+                                                 :person/name "Frederic"
+                                                 :person/familyname "Johanson"
+                                                 :person/street "Fifty-First Street 53"
+                                                 :person/postal 38237
+                                                 :person/telefon "02343248474"
+                                                 :person/weeight 0.3823}))))
+    nil)
+
+  (time (-coerce datom-vector sha512-message-digest))
+
+  (coerce-seq (sha512-message-digest) sha512-message-digest [:foo {:a "b"}])
+
+  ;; quick & dirty js advanced compilation benchmark
+  (enable-console-print!)
 
   (def datom-vector (doall (vec (repeat 10000 {:db/id 18239
                                                :person/name "Frederic"
@@ -258,5 +204,4 @@ Our hash version is coded in first 2 bits."
                                                :person/telefon "02343248474"
                                                :person/weeight 0.3823}))))
 
-  (time (uuid datom-vector))
-  )
+  (.log js/console "benchmarking: " (time (-coerce datom-vector sha512-message-digest))))

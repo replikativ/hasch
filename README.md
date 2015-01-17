@@ -34,14 +34,16 @@ Then you can access the major function through `hasch.core`:
 (uuid "hello world") => #uuid "09c1649c-40c3-51cc-829c-dc781de2eda0"
 ~~~
 
-# Upcoming stable version 0.3.0
+# Upcoming version 0.3.0 (will be stable hashing scheme)
+
+Add `[net.polyc0l0r/hasch "0.3.0-beta1"]` to your project's dependencies.
 
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independant of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independant fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
 You can then create UUID5 (using SHA-512) from it. Alternatively you can use your own hash function, but this is not standardized and hence beyond the spec.
 
 ## Motivation
 
-The motivation is to exchange (potentially large) values in a hostile environment without conflicts. The concrete design motivation is to use the commit log of [geschichte](https://github.com/ghubber/geschichte) for exchange of datascript/datomic transaction logs. As long as you are in a trusted environment you can trust the random generator for conflict-free UUIDs as is done internally by many Clojure project's, but as soon as you distribute values, collisions can happen. Note that you can treat hasch's cryptographic UUIDs like random UUIDs internally and don't need to verify them.
+The motivation is to exchange (potentially large) values in a hostile environment without conflicts. The concrete design motivation is to use the commit log of [geschichte](https://github.com/ghubber/geschichte) for exchange of datascript/datomic transaction logs. As long as you are in a trusted environment you can trust the random generator for conflict-free UUIDs as is done internally by many Clojure projects, but as soon as you distribute values, collisions can happen. Note that you can treat hasch's cryptographic UUIDs like random UUIDs internally and don't need to verify them.
 
 ## Why not use Clojure's `hash`?
 
@@ -49,7 +51,7 @@ I wish I could have done that instead of reimplementing my own hashing scheme fo
 
 ## Why not sort?
 
-This can be done, but in my benchmarks sorting took the same time as the complete hashing with xor, so it was slower and it does not scale linearly. It also needs double the memory to create the sorted collection.
+Sorting of heterogenous collections requires a unique serialization (e.g. pr-str or our encoding) on keys beforehand, which was sadly not faster even for small maps and sets. Sorting on number only maps was faster for maps until at least a size of one million. At some point the complexity of sorting becomes more expansive than xor-ing hashed kv-vectors, so sorting is a simple but not linearly scalable solution. Still it could prove valuable in the future.
 
 ## edn support
 
@@ -64,86 +66,89 @@ The library is designed safety first, speed second. I have put quite some though
 
 ## Speed
 
-The first versions were just build around safety, but perform poorly with large values. The speed should be sufficient to be in the same order of magnitude as transmission speed (throughput + latency) over slow to mid-range internet broadband connections. If you want to transmit larger values fast, you maybe can chose a sequential binary encoding with native hashing speed.
+The first versions were just build around safety, but perform poorly with large values. The speed should be sufficient to be in the same order of magnitude as transmission speed (throughput + latency) over slow to mid-range internet broadband connections. If you want to transmit larger values fast, you maybe can chose a sequential binary encoding with native hashing speed. JavaScript performance is still significantly slower (~10x), seemingly due to the lack of native SHA hashing routines.
 
-*These are just micro-benchmarks on my 3 year laptop (old version is 4-10x slower), I just mention them so you can get an impression.*
+*These are just micro-benchmarks on my 3 year laptop, I just mention them so you can get an impression. *
 
 ~~~clojure
 ;; most important and worst case, what can be done?
 hasch.platform> (let [val (into {} (doall (map vec (partition 2
                                                 (interleave (range 1000000)
-                                                            (range 1000000 2000000))))))]
-    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+                                                            (range 1000000))))))]
+    (bench (-coerce val sha512-message-digest)))
 Evaluation count : 60 in 60 samples of 1 calls.
-             Execution time mean : 5.691272 sec
-    Execution time std-deviation : 194.356782 ms
-   Execution time lower quantile : 5.572440 sec ( 2.5%)
-   Execution time upper quantile : 6.304907 sec (97.5%)
-                   Overhead used : 1.967460 ns
+             Execution time mean : 3.596037 sec
+    Execution time std-deviation : 23.812536 ms
+   Execution time lower quantile : 3.566430 sec ( 2.5%)
+   Execution time upper quantile : 3.647540 sec (97.5%)
+                   Overhead used : 2.039920 ns
 
 Found 4 outliers in 60 samples (6.6667 %)
-	low-severe	 1 (1.6667 %)
-	low-mild	 3 (5.0000 %)
- Variance from outliers : 20.6184 % Variance is moderately inflated by outliers
+	low-severe	 3 (5.0000 %)
+	low-mild	 1 (1.6667 %)
+ Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
 nil
 
 hasch.platform> (let [val (doall (range 1000000))]
-    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+    (bench (-coerce val sha512-message-digest)))
 Evaluation count : 240 in 60 samples of 4 calls.
-             Execution time mean : 269.192864 ms
-    Execution time std-deviation : 13.568064 ms
-   Execution time lower quantile : 264.196463 ms ( 2.5%)
-   Execution time upper quantile : 290.258534 ms (97.5%)
-                   Overhead used : 1.967460 ns
+             Execution time mean : 297.320276 ms
+    Execution time std-deviation : 2.683060 ms
+   Execution time lower quantile : 293.217179 ms ( 2.5%)
+   Execution time upper quantile : 302.059975 ms (97.5%)
+                   Overhead used : 2.039920 ns
 
-Found 8 outliers in 60 samples (13.3333 %)
-	low-severe	 4 (6.6667 %)
-	low-mild	 4 (6.6667 %)
- Variance from outliers : 36.8270 % Variance is moderately inflated by outliers
+Found 1 outliers in 60 samples (1.6667 %)
+	low-severe	 1 (1.6667 %)
+ Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
 nil
 
 hasch.platform> (let [val (doall (into #{} (range 1000000)))]
-    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+    (bench (-coerce val sha512-message-digest)))
 Evaluation count : 60 in 60 samples of 1 calls.
-             Execution time mean : 2.307726 sec
-    Execution time std-deviation : 233.571036 ms
-   Execution time lower quantile : 2.171922 sec ( 2.5%)
-   Execution time upper quantile : 3.105212 sec (97.5%)
-                   Overhead used : 1.967460 ns
+             Execution time mean : 2.733429 sec
+    Execution time std-deviation : 15.463782 ms
+   Execution time lower quantile : 2.708645 sec ( 2.5%)
+   Execution time upper quantile : 2.758701 sec (97.5%)
+                   Overhead used : 2.039920 ns
 
-Found 9 outliers in 60 samples (15.0000 %)
-	low-severe	 3 (5.0000 %)
-	low-mild	 6 (10.0000 %)
- Variance from outliers : 70.3610 % Variance is severely inflated by outliers
+Found 1 outliers in 60 samples (1.6667 %)
+	low-severe	 1 (1.6667 %)
+ Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
 nil
 
-hasch.platform> (let [val (doall (repeat 1000000 "hello"))]
-    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
-Evaluation count : 180 in 60 samples of 3 calls.
-             Execution time mean : 430.994775 ms
-    Execution time std-deviation : 85.018651 ms
-   Execution time lower quantile : 383.670949 ms ( 2.5%)
-   Execution time upper quantile : 652.204588 ms (97.5%)
-                   Overhead used : 1.967460 ns
+hasch.platform> (let [val (doall (repeat 1000000 "hello world"))]
+    (bench (-coerce val sha512-message-digest)))
+WARNING: Final GC required 1.472161970438994 % of runtime
+Evaluation count : 120 in 60 samples of 2 calls.
+             Execution time mean : 873.084789 ms
+    Execution time std-deviation : 5.753430 ms
+   Execution time lower quantile : 862.909606 ms ( 2.5%)
+   Execution time upper quantile : 885.560937 ms (97.5%)
+                   Overhead used : 2.039920 ns
 
-Found 11 outliers in 60 samples (18.3333 %)
-	low-severe	 11 (18.3333 %)
- Variance from outliers : 91.1043 % Variance is severely inflated by outliers
+Found 2 outliers in 60 samples (3.3333 %)
+	low-severe	 2 (3.3333 %)
+ Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
 nil
 
 hasch.platform> (let [val (doall (repeat 1000000 :foo/bar))]
-    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
-WARNING: Final GC required 1.0538668933601911 % of runtime
-Evaluation count : 60 in 60 samples of 1 calls.
-             Execution time mean : 967.548623 ms
-    Execution time std-deviation : 245.052748 ms
-   Execution time lower quantile : 637.265154 ms ( 2.5%)
-   Execution time upper quantile : 1.273569 sec (97.5%)
-                   Overhead used : 1.967460 ns
+    (bench (-coerce val sha512-message-digest)))
+WARNING: Final GC required 1.072577784478402 % of runtime
+Evaluation count : 120 in 60 samples of 2 calls.
+             Execution time mean : 756.394263 ms
+    Execution time std-deviation : 2.935836 ms
+   Execution time lower quantile : 750.827152 ms ( 2.5%)
+   Execution time upper quantile : 761.299697 ms (97.5%)
+                   Overhead used : 2.039920 ns
+
+Found 1 outliers in 60 samples (1.6667 %)
+	low-severe	 1 (1.6667 %)
+ Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
 nil
 
 hasch.platform> (let [val (byte-array (* 1024 1024 300) (byte 42))] ;; 300 mib bytearray
-    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
+    (bench (-coerce val sha512-message-digest)))
 Evaluation count : 60 in 60 samples of 1 calls.
              Execution time mean : 1.987549 sec
     Execution time std-deviation : 134.189868 ms
@@ -156,10 +161,34 @@ Found 3 outliers in 60 samples (5.0000 %)
  Variance from outliers : 50.1416 % Variance is severely inflated by outliers
 nil
 
+hasch.platform> (let [val (doall (vec (repeat 10000 {:db/id 18239
+                                       :person/name "Frederic"
+                                       :person/familyname "Johanson"
+                                       :person/street "Fifty-First Street 53"
+                                       :person/postal 38237
+                                       :person/phone "02343248474"
+                                       :person/weight 38.23})))]
+    (bench (-coerce val sha512-message-digest)))
+WARNING: Final GC required 1.2237845534164749 % of runtime
+Evaluation count : 240 in 60 samples of 4 calls.
+             Execution time mean : 322.164678 ms
+    Execution time std-deviation : 1.821136 ms
+   Execution time lower quantile : 318.232462 ms ( 2.5%)
+   Execution time upper quantile : 325.916354 ms (97.5%)
+                   Overhead used : 2.039920 ns
+
+Found 4 outliers in 60 samples (6.6667 %)
+	low-severe	 2 (3.3333 %)
+	low-mild	 1 (1.6667 %)
+	high-mild	 1 (1.6667 %)
+ Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
+nil
+
 ~~~
 
 
 # Changes
+- 0.3.0 Overhaul encoding for ~10x-20x times performance on the JVM. Use safe SHA-512. Add byte-array support for blobs.
 - 0.2.3 properly dispatch on IRecord (instead of IMap)
 - 0.2.2 cannot coerce record tags because of conflicts, rather extend record to properly print
 - 0.2.1 fix tag coercion on JVM
@@ -173,19 +202,19 @@ You can avoid the pr-str/read-string step (also effectively allocating double me
 - hashes *must* follow `IEquiv` equality of Clojure(Script): `(= a b) <=> (= (edn-hash a) (edn-hash b))`, `(not= a b) <=> (not= (edn-hash a) (edn-hash b))`: Your serialisation has to be *unique*, hashing has to be injective or in other words you might not introduce collisions. Non-equal objects must have non-equal hashes.
 - *reflexivity*: `(= (edn-hash a) (edn-hash a))`, including on different runtimes
 - *symmetry*: `(= (edn-hash a) (edn-hash b)) <=> (= (edn-hash b) (edn-hash a))` (trivial because of `=`)
-- *transitivity*: `(and (= (edn-hash a) (edn-hash b)) (= (edn-hash b) (edn-hash c))) => (= (edn-hash a) (edn-hash c))`
-- If you implement *both* pr-str serialisation and hash-coercion, your hash *must* match the default non-extended hash for your (printable) type. In other words implementing `IHashCoercion` must be transparent compared to using the default serialisation. You should implement both printing and coercion if you implement coercion, otherwise you might corrupt hashes later by implementing a different pr-str serialisation.
+- *transitivity*: `(and (= (edn-hash a) (edn-hash b)) (= (edn-hash b) (edn-hash c))) => (= (edn-hash a) (edn-hash c))` (also trivial because of `=`)
+- If you implement *both* pr-str serialisation and hash-coercion, your hash *must* match the default non-extended hash for your (printable) type. In other words implementing `IHashCoercion` must be transparent compared to using the default serialisation. You should implement both printing and coercion if you implement coercion, otherwise you might corrupt hashes later by accidentally creating a different pr-str serialisation.
 
 
 # TODO
-- Cover serialisation (reading) exceptions for records.
+- Gracefully cover serialisation (reading) exceptions for records.
 - Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a peristent data-structure tree by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [geschichte](https://github.com/ghubber/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
-- Use test.check/double.check property based tests.
-- Profile for performance.
+- Use test.check/double.check property based tests?
+- If keeping sorted maps/sets is feasable for high-throughput applications, allow to hash them sequentally.
 
 ## License
 
-Copyright © 2014 Christian Weilbach
+Copyright © 2014-2015 Christian Weilbach
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
