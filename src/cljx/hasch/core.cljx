@@ -15,7 +15,7 @@
      (let [res (-coerce val md md-create-fn)]
        (.reset md)
        (.update md res)
-       (map byte (.digest md))))))
+       (into-array (map platform/signed-byte (.digest md)))))))
 
 (defn uuid
   "Creates random UUID-4 without argument or UUID-5 for the argument value."

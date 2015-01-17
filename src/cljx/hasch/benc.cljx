@@ -36,3 +36,7 @@ are included in the hash."
               a))
           (byte-array 0)
           (map #(encode (:vector magics) (-coerce % resetable-md md-create-fn)) (seq coll))))
+
+(def max-entropy 32)
+
+(def split-size 1024)

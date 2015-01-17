@@ -1,8 +1,8 @@
 (ns hasch.platform
-  (:require [goog.crypt.Sha1]
+  (:require [goog.crypt.Sha512]
             [cljs.reader :as reader]
             [clojure.string]
-            [hasch.benc :refer [IHashCoercion -coerce magics padded-coerce]]))
+            [hasch.benc :refer [IHashCoercion -coerce magics split-size]]))
 
 #_(do
     (ns dev)
@@ -42,31 +42,6 @@
        "-4" (f) (f) (f) "-" (g) (f) (f) (f) "-"
        (f) (f) (f) (f) (f) (f) (f) (f) (f) (f) (f) (f))))))
 
-
-
-(let [md (goog.crypt.Sha1.)]
-  (defn sha-1
-  "Return a SHA-1 hash in signed byte encoding
-  for an input sequence in the same encoding."
-    [token bytes-or-seq-of-bytes]
-    (.reset md)
-    (.update md (byte-array 1 token))
-    (if-not (satisfies? ISeq bytes-or-seq-of-bytes) ;; TODO?
-      (.update md bytes-or-seq-of-bytes)
-      (doseq [bs bytes-or-seq-of-bytes]
-        (.update md bs)))
-    (.digest md)))
-
-(defn sha-1
-  [bytes]
-  (let [md
-        sarr (into-array (map #(if (neg? %) (+ % 256) %) bytes))]
-    (.update md sarr)
-    (map #(if (> % 127)
-            (- % 256)
-            %) (.digest md))))
-
-
 (defn byte->hex [b]
   (-> b
       (bit-and 0xff)
@@ -83,45 +58,36 @@
 ;; which is taken from //http://user1.matsumoto.ne.jp/~goma/js/utf.js
 ;; verified against: "小鳩ちゃんかわいいなぁ"
 (defn utf8
-  "Encodes a string as UTF-8 in an unsigned byte value seq."
+  "Encodes a string as UTF-8 in an unsigned js array."
   [s]
-  (mapcat
-   (fn [pos]
-     (let [c (.charCodeAt s pos)]
-       (cond (<= c 0x7F) [(bit-and c 0xFF)]
-             (<= c 0x7FF) [(bit-or 0xC0 (bit-shift-right c 6))
-                           (bit-or 0x80 (bit-and c 0x3F))]
-             (<= c 0xFFFF) [(bit-or 0xE0 (bit-shift-right c 12))
-                            (bit-or 0x80 (bit-and (bit-shift-right c 6) 0x3F))
+  (into-array
+   (mapcat
+    (fn [pos]
+      (let [c (.charCodeAt s pos)]
+        (cond (<= c 0x7F) [(bit-and c 0xFF)]
+              (<= c 0x7FF) [(bit-or 0xC0 (bit-shift-right c 6))
                             (bit-or 0x80 (bit-and c 0x3F))]
-             :default (let [j (loop [j 4]
-                                (if (pos? (bit-shift-right c (* j 6)))
-                                  (recur (inc j))
-                                  j))
-                            init (bit-or (bit-and (bit-shift-right 0xFF00 j) 0xFF)
-                                         (bit-shift-right c (* 6 (dec j))))]
-                        (conj (->> (range (dec j))
-                                   reverse
-                                   (map #(bit-or 0x80
-                                                 (bit-and (bit-shift-right c (* 6 %))
-                                                          0x3F))))
-                              init)))))
-   (range (.-length s))))
+              (<= c 0xFFFF) [(bit-or 0xE0 (bit-shift-right c 12))
+                             (bit-or 0x80 (bit-and (bit-shift-right c 6) 0x3F))
+                             (bit-or 0x80 (bit-and c 0x3F))]
+              :default (let [j (loop [j 4]
+                                 (if (pos? (bit-shift-right c (* j 6)))
+                                   (recur (inc j))
+                                   j))
+                             init (bit-or (bit-and (bit-shift-right 0xFF00 j) 0xFF)
+                                          (bit-shift-right c (* 6 (dec j))))]
+                         (conj (->> (range (dec j))
+                                    reverse
+                                    (map #(bit-or 0x80
+                                                  (bit-and (bit-shift-right c (* 6 %))
+                                                           0x3F))))
+                               init)))))
+    (range (.-length s)))))
 
+#_(utf8 "小鳩ちゃんかわいいなぁ")
 
 (defn signed-byte [b]
   (if (> b 127) (- b 256) b))
-
-
-(defn encode [input]
-  (when input
-    (->> input
-         utf8
-         (map signed-byte)
-         (mapcat benc))))
-
-#_(encode "小鳩ちゃんかわいいなぁ")
-
 
 (defn uuid5
   "Generates a uuid5 from a sha-1 hash byte sequence.
@@ -139,68 +105,158 @@ Our hash version is coded in first 2 bits."
                      "-" (apply str (drop 20 s)))))
         UUID.)))
 
+(defn sha512-message-digest []
+  (goog.crypt.Sha512.))
+
+(defn- digest
+  [md bytes-or-seq-of-bytes]
+  (.reset md)
+  (if (seq? bytes-or-seq-of-bytes)
+    (doseq [bs bytes-or-seq-of-bytes]
+      (.update md bs))
+    (.update md bytes-or-seq-of-bytes))
+  (.digest md))
+
+(defn coerce-seq [resetable-md md-create-fn seq]
+  (.reset resetable-md)
+  (loop [s seq]
+    (let [f (first s)]
+      (when f
+        (.update resetable-md (-coerce f resetable-md md-create-fn))
+        (recur (rest s)))))
+  (.digest resetable-md))
+
+(comment
+  (.log js/console (coerce-seq (sha512-message-digest) sha512-message-digest '(1 2 3)))
+
+  (.log js/console (into-array (map signed-byte ))))
+
+(defn padded-coerce
+  "Commutatively coerces elements of collection, seq entries should be crypto hashed
+  to avoid collisions in XOR."
+  [seq resetable-md md-create-fn]
+  (let [len (min (long (alength (first seq))) max-entropy)]
+    (reduce (fn padded-xor [acc elem]
+              (loop [i 0]
+                (when (< i len)
+                  (aset acc i (byte (bit-xor (aget acc i) (aget elem i))))
+                  (recur (inc i))))
+              acc)
+            (into-array (repeat len 0))
+            seq)))
+
+(defn encode [magic a]
+  (.concat #js [magic] a))
+
+(defn encode-safe [resetable-md a]
+  (if (< (count a) split-size)
+    (let [len (alength a)
+          ea (into-array (repeat len 0))]
+      (loop [i 0]
+        (when-not (= i len)
+          (let [e (aget a i)]
+            (when (and (> e (byte 0))
+                       (< e (byte 30)))
+              (aset ea i (byte 1))))
+          (recur (inc i))))
+      (.concat a ea))
+    (digest resetable-md a)))
+
+(defn- str->utf8 [x]
+  (-> x str utf8))
 
 (extend-protocol IHashCoercion
   nil
-  (-coerce [this hash-fn] (list (:nil magics)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:nil magics) #js[]))
 
   boolean
-  (-coerce [this hash-fn] (list (:boolean magics) (if this 1 0)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:boolean magics) #js [(if this 41 40)]))
 
   string
-  (-coerce [this hash-fn] (conj (encode this) (:string magics)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:string magics) (encode-safe resetable-md (str->utf8 this))))
 
   number
-  (-coerce [this hash-fn] (conj (encode (str this)) (:number magics)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:number magics) (str->utf8 this)))
 
   js/Date
-  (-coerce [this hash-fn]
-    (conj (encode (str (.getTime this))) (:inst magics)))
+  (-coerce [this resetable-md md-create-fn]
+    ;; utf8 is not needed, can be optimized
+    (encode (:inst magics) (str->utf8 (.getTime this))))
 
   cljs.core/UUID
-  (-coerce [this hash-fn] (conj (encode (.-uuid this)) (:uuid magics)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:uuid magics) (str->utf8 (.-uuid this))))
 
   cljs.core/Symbol
-  (-coerce [this hash-fn] (conj (mapcat benc
-                                        (concat (encode (namespace this))
-                                                (encode (name this))))
-                                (:symbol magics)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:symbol magics) (encode-safe resetable-md (str->utf8 this))))
 
   cljs.core/Keyword
-  (-coerce [this hash-fn] (conj (mapcat benc
-                                        (concat (encode (namespace this))
-                                                (encode (name this))))
-                                (:keyword magics)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:keyword magics) (encode-safe resetable-md (str->utf8 this))))
 
   default
-  (-coerce [this hash-fn]
+  (-coerce [this resetable-md md-create-fn]
     (cond (satisfies? IRecord this)
           (let [[tag val] (as-value this)]
-            (hash-fn (conj (concat (-coerce tag hash-fn) (-coerce val hash-fn))
-                           (:literal magics))))
+            (encode (:literal magics)
+                    (coerce-seq resetable-md
+                                md-create-fn
+                                [(-coerce tag resetable-md md-create-fn)
+                                 (-coerce val resetable-md md-create-fn)])))
 
           (satisfies? ISeq this)
-          (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
-                         (:seq magics)))
+          (encode (:seq magics) (coerce-seq resetable-md md-create-fn this))
 
           (satisfies? IVector this)
-          (hash-fn (conj (mapcat #(-coerce % hash-fn) this)
-                         (:vector magics)))
+          (encode (:vector magics) (coerce-seq resetable-md md-create-fn this))
 
           (satisfies? IMap this)
-          (hash-fn (conj (padded-coerce this hash-fn)
-                         (:map magics)))
+          (encode (:map magics)
+                  (digest resetable-md
+                          (padded-coerce (map #(-coerce %
+                                                        resetable-md
+                                                        md-create-fn)
+                                              (seq this))
+                                         resetable-md
+                                         md-create-fn)))
 
           (satisfies? ISet this)
-          (hash-fn (conj (padded-coerce this hash-fn)
-                         (:set magics)))
+          (encode (:set magics)
+                  (digest resetable-md
+                          (padded-coerce (map #(digest resetable-md
+                                                       (-coerce % resetable-md md-create-fn))
+                                              (seq this))
+                                         resetable-md
+                                         md-create-fn)))
 
           ;; TODO
           #_(instance? js/UInt8Array this)
           #_(hash-fn (conj (mapcat benc this)
-                         (:binary magics)))
+                           (:binary magics)))
 
           :else
           (let [[tag val] (as-value this)]
-            (hash-fn (conj (concat (-coerce tag hash-fn) (-coerce val hash-fn))
-                           (:literal magics)))))))
+            (encode (:literal magics)
+                    (coerce-seq resetable-md
+                                md-create-fn
+                                [(-coerce tag resetable-md md-create-fn)
+                                 (-coerce val resetable-md md-create-fn)]))))))
+
+
+(comment
+
+  (def datom-vector (doall (vec (repeat 10000 {:db/id 18239
+                                               :person/name "Frederic"
+                                               :person/familyname "Johanson"
+                                               :person/street "Fifty-First Street 53"
+                                               :person/postal 38237
+                                               :person/telefon "02343248474"
+                                               :person/weeight 0.3823}))))
+
+  (time (uuid datom-vector))
+  )

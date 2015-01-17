@@ -1,6 +1,6 @@
 (ns hasch.platform
   "Platform specific implementations."
-  (:require [hasch.benc :refer [magics IHashCoercion -coerce]]
+  (:require [hasch.benc :refer [magics IHashCoercion -coerce split-size max-entropy]]
             [clojure.edn :as edn])
   (:import java.security.MessageDigest
            java.nio.ByteBuffer
@@ -9,7 +9,8 @@
 (set! *warn-on-reflection* true)
 
 (defn as-value ;; TODO maybe use transit json in memory?
-  "Transforms runtime specific records by printing and reading with a default tagged reader."
+  "Transforms runtime specific records by printing and reading with a default tagged reader.
+This is hence is as slow as pr-str and read-string."
   [v]
   (edn/read-string {:default (fn [tag val] [tag val])}
                    (pr-str v)))
@@ -26,31 +27,14 @@
       (Integer/toString 16)
       (.substring 1)))
 
-
 (defn hash->str [bytes]
   (apply str (map byte->hex bytes)))
 
-(defn ^bytes encode [^Byte magic ^bytes a]
-  (let [len (long (alength a))
-        ea (byte-array (inc len))]
-    (aset ea 0 magic)
-    (loop [i 0]
-      (when-not (= i len)
-        (let [e (aget a i)]
-          (when (and (> e (byte 0))
-                     (< e (byte 30)))
-            (aset ea (inc i) (byte 1))))
-        (recur (inc i))))
-    (let [out (ByteArrayOutputStream.)]
-      (.write out a)
-      (.write out ea)
-      (.toByteArray out))))
-
-(defn sha512-message-digest []
+(defn ^MessageDigest sha512-message-digest []
   (MessageDigest/getInstance "sha-512"))
 
 (let [byte-class (Class/forName "[B")]
-  (defn- digest
+  (defn- ^bytes digest
     [^MessageDigest md bytes-or-seq-of-bytes]
     (.reset md)
     (if (= (type bytes-or-seq-of-bytes) byte-class)
@@ -59,29 +43,23 @@
         (.update md bs)))
     (.digest md)))
 
-(defn- bytes->long [bytes] ;endianness?
-  (->> bytes
-       (into-array Byte/TYPE)
-       ByteBuffer/wrap
-       .getLong))
-
-
 (defn uuid5
   "Generates a UUID version 5 from a sha-1 hash byte sequence.
 Our hash version is coded in first 2 bits."
-  [sha-hash]
-  (let [high  (take 8 sha-hash)
-        low (->> sha-hash (drop 8) (take 8))]
-    (java.util.UUID. (-> (bytes->long high)
+  [^bytes sha-hash]
+  (let [bb (ByteBuffer/wrap sha-hash)
+        high (.getLong bb)
+        low (.getLong bb)]
+    (java.util.UUID. (-> high
                          (bit-or 0x0000000000005000)
                          (bit-and 0x7fffffffffff5fff)
                          (bit-clear 63) ;; needed because of BigInt cast of bitmask
                          (bit-clear 62))
-                     (-> (bytes->long low)
+                     (-> low
                          (bit-set 63)
                          (bit-clear 62)))))
 
-(defn coerce-seq [^MessageDigest resetable-md md-create-fn seq]
+(defn ^bytes coerce-seq [^MessageDigest resetable-md md-create-fn seq]
   (.reset resetable-md)
   (loop [s seq]
     (let [f (first s)]
@@ -90,32 +68,11 @@ Our hash version is coded in first 2 bits."
         (recur (rest s)))))
   (.digest resetable-md))
 
-(defn encode-symbolic [^Byte token symbolic]
-  (let [out (ByteArrayOutputStream.)]
-    (.write out (.getBytes (or (namespace symbolic) "") "UTF-8"))
-    (.write out (byte-array 1 token))
-    (.write out (.getBytes (or (name symbolic) "") "UTF-8"))
-    (encode token (.toByteArray out))))
-
-
-(defn encode-number
-  "Assumption: Numbers cannot be serialized to strings with ASCII bytes 0 < b < 30.
-   This spares ~2x for number encoding."
-  [^Byte token number]
-  (let [out (ByteArrayOutputStream.)]
-    (.write out (byte-array 1 token))
-    (.write out (.getBytes (str number) "UTF-8"))
-    (.toByteArray out)))
-
-(defn encode-binary [sha512-unsigned-hash-bytes-digest]
-  "Encode an external binary hash."
-  (encode (:binary magics) sha512-unsigned-hash-bytes-digest))
-
-(defn padded-coerce
+(defn ^bytes padded-coerce
   "Commutatively coerces elements of collection, seq entries should be crypto hashed
   to avoid collisions in XOR."
   [seq resetable-md md-create-fn]
-  (let [len (count (first seq))]
+  (let [len (min (long (alength ^bytes (first seq))) max-entropy)]
     (reduce (fn padded-xor [^bytes acc ^bytes elem]
               (loop [i 0]
                 (when (< i len)
@@ -125,55 +82,82 @@ Our hash version is coded in first 2 bits."
             (byte-array len)
             seq)))
 
-(def split-size 1024)
+(defn ^bytes encode [^Byte magic ^bytes a]
+  (let [out (ByteArrayOutputStream.)]
+    (.write out (byte-array 1 magic))
+    (.write out a)
+    (.toByteArray out)))
+
+
+(defn ^bytes encode-safe [^MessageDigest resetable-md ^bytes a]
+  (if (< (count a) split-size)
+    (let [len (long (alength a))
+          ea (byte-array len)]
+      (loop [i 0]
+        (when-not (= i len)
+          (let [e (aget a i)]
+            (when (and (> e (byte 0))
+                       (< e (byte 30)))
+              (aset ea i (byte 1))))
+          (recur (inc i))))
+      (let [out (ByteArrayOutputStream.)]
+        (.write out a)
+        (.write out ea)
+        (.toByteArray out)))
+    (digest resetable-md a)))
+
+(defn- ^bytes str->utf8 [x]
+  (-> x str (.getBytes "UTF-8")))
 
 (extend-protocol IHashCoercion
   java.lang.Boolean
   (-coerce [this resetable-md md-create-fn]
-    (let [barr (byte-array 2)]
-      (aset barr 0 ^Byte (:boolean magics))
-      (aset barr 1 (if this (byte 41) (byte 40)))
-      barr))
+    (encode (:boolean magics) (byte-array 1 (if this (byte 41) (byte 40)))))
 
   ;; don't distinguish characters from string for javascript
   java.lang.Character
-  (-coerce [this resetable-md md-create-fn] (encode (:string magics) (.getBytes (str this) "UTF-8")))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:string magics) (encode-safe resetable-md (str->utf8 this))))
 
   java.lang.String
   (-coerce [this resetable-md md-create-fn]
-    (let [bs (.getBytes this "UTF-8")]
-      (encode (:string magics) (if (< (alength bs) split-size)
-                                 bs
-                                 (digest resetable-md bs)))))
+    (encode (:string magics) (encode-safe resetable-md (str->utf8 this))))
 
   java.lang.Integer
-  (-coerce [this resetable-md md-create-fn] (encode-number (:number magics) this))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.lang.Long
-  (-coerce [this resetable-md md-create-fn] (encode-number (:number magics) this))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.lang.Float
-  (-coerce [this resetable-md md-create-fn] (encode-number (:number magics) this))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.lang.Double
-  (-coerce [this resetable-md md-create-fn] (encode-number (:number magics) this))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.util.UUID
-  (-coerce [this resetable-md md-create-fn] (encode (:uuid magics) (.getBytes (str this) "UTF-8")))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:uuid magics) (.getBytes (.toString this) "UTF-8")))
 
   java.util.Date
-  (-coerce [this resetable-md md-create-fn] (encode-number (:inst magics) (.getTime this)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:inst magics) (.getBytes (.toString ^java.lang.Long (.getTime this)) "UTF-8")))
 
   nil
-  (-coerce [this resetable-md md-create-fn] (encode (:nil magics) (byte-array 0)))
+  (-coerce [this resetable-md md-create-fn]
+    (encode (:nil magics) (byte-array 0)))
 
   clojure.lang.Symbol
   (-coerce [this resetable-md md-create-fn]
-    (encode-symbolic (:symbol magics) this))
+    (encode (:symbol magics) (encode-safe resetable-md (str->utf8 this))))
 
   clojure.lang.Keyword
   (-coerce [this resetable-md md-create-fn]
-    (encode-symbolic (:keyword magics) this))
+    (encode (:keyword magics) (encode-safe resetable-md (str->utf8 this))))
 
   clojure.lang.ISeq
   (-coerce [this resetable-md md-create-fn]
@@ -188,46 +172,45 @@ Our hash version is coded in first 2 bits."
     (if (record? this)
       (let [[tag val] (as-value this)]
         (encode (:literal magics)
-                (coerce-seq resetable-md md-create-fn [(-coerce tag resetable-md md-create-fn)
-                                                       (byte-array 1 (:literal magics))
-                                                       (-coerce val resetable-md md-create-fn)])))
+                (coerce-seq resetable-md
+                            md-create-fn
+                            [(-coerce tag resetable-md md-create-fn)
+                             (-coerce val resetable-md md-create-fn)])))
       (encode (:map magics)
-              (do
-                (.reset resetable-md)
-                ;; TODO do not map over kv-entries as vectors?
-                (.update resetable-md ^bytes (padded-coerce (map #(-coerce % resetable-md md-create-fn)
-                                                                 (seq this))
-                                                            resetable-md
-                                                            md-create-fn))
-                (.digest resetable-md)))))
+              (digest resetable-md
+                      (padded-coerce (map #(-coerce %
+                                                    resetable-md
+                                                    md-create-fn)
+                                          (seq this))
+                                     resetable-md
+                                     md-create-fn)))))
 
 
 
   clojure.lang.IPersistentSet
   (-coerce [this ^MessageDigest resetable-md md-create-fn]
     (encode (:set magics)
-            (do
-              (.reset resetable-md)
-              (.update resetable-md ^bytes (padded-coerce (map #(digest resetable-md (-coerce % resetable-md md-create-fn))
-                                                               (seq this))
-                                                          resetable-md
-                                                          md-create-fn))
-              (.digest resetable-md))))
+            (digest resetable-md
+                    (padded-coerce (map #(digest resetable-md
+                                                 (-coerce % resetable-md md-create-fn))
+                                        (seq this))
+                                   resetable-md
+                                   md-create-fn))))
 
-  java.lang.Object
+  java.lang.Object ;; for custom deftypes that might be printable (but generally not)
   (-coerce [this resetable-md md-create-fn]
     (let [[tag val] (as-value this)]
-      (let [out (ByteArrayOutputStream.)]
-        (.write out ^bytes (-coerce tag resetable-md md-create-fn))
-        (.write out (byte-array 1 (:literal magics)))
-        (.write out ^bytes (-coerce val resetable-md md-create-fn))
-        (encode (:literal magics) (.toByteArray out))))))
+      (encode (:literal magics)
+              (coerce-seq resetable-md
+                          md-create-fn
+                          [(-coerce tag resetable-md md-create-fn)
+                           (-coerce val resetable-md md-create-fn)])))))
 
 
 (extend (Class/forName "[B")
   IHashCoercion
   {:-coerce (fn [^bytes this resetable-md md-create-fn]
-              (encode-binary (digest resetable-md this)))})
+              (encode (:binary magics) (encode-safe resetable-md this)))})
 
 
 
@@ -239,41 +222,79 @@ Our hash version is coded in first 2 bits."
 
   (use 'criterium.core)
 
-  (def million-map (into {} (doall (map vec (partition 2 ; 4 secs
+  (def million-map (into {} (doall (map vec (partition 2 ; 2.40 secs
                                                        (interleave (range 1000000)
-                                                                   (range 1000000 2000000)))))))
+                                                                   (range 1000000)))))))
 
-  (def million-seq (doall (map vec (partition 2 ;; 1.1 secs
+  (def million-seq (doall (map vec (partition 2 ;; 1.8 secs
                                               (interleave (range 1000000)
                                                           (range 1000000 2000000))))))
 
   (def million-seq2 (doall (range 1000000))) ;; 275 ms
 
-  (take 10 (time (into (sorted-set) (range 1e7))))
+  (take 10 (time (into (sorted-set) (range 1e6)))) ;; 2.3 s
 
-  (def million-set (doall (into #{} (range 1000000)))) ;; 2.7 secs
+  (bench (coerce-seq (sha512-message-digest) sha512-message-digest ;; 15.6 ms
+                     (seq (into (sorted-set) (range 1e4)))))
 
-  (def million-seq3 (doall (repeat 1000000 "hello world"))) ;; 660 msecs
+  (bench (-coerce (into #{} (range 1e4)) (sha512-message-digest) sha512-message-digest)) ;; 19.6 ms
 
-  (def million-seq4 (doall (repeat 1000000 :foo/bar))) ;; 700 msecs
+  (bench (-coerce (seq (into (sorted-set) (range 10)))
+                  (sha512-message-digest)
+                  sha512-message-digest)) ;; 8.16 us
 
-  (count (pr-str {:db/id 18239
-                  :person/name "Frederic"
-                  :person/familyname "Johanson"
-                  :person/street "Fifty-First Street 53"
-                  :person/postal 38237
-                  :person/telefon "02343248474"
-                  :person/weeight 0.3823}))
+  (bench (-coerce (into #{} (range 10))
+                  (sha512-message-digest)
+                  sha512-message-digest)) ;; 22.2 us
+
+  (bench (-coerce (seq (into (sorted-set) (range 100)))
+                  (sha512-message-digest)
+                  sha512-message-digest)) ;; 88 us
+
+  (bench (-coerce (into #{} (range 100))
+                  (sha512-message-digest)
+                  sha512-message-digest)) ;; 192 us
+
+
+  (bench (-coerce (seq (into (sorted-set) (range 1e4)))
+                  (sha512-message-digest)
+                  sha512-message-digest)) ;; 15.6 ms
+
+  (bench (-coerce (into #{} (range 1e4))
+                  (sha512-message-digest)
+                  sha512-message-digest)) ;; 19.7 ms
+
+  (bench (-coerce (seq (into (sorted-map) (map vec (partition 2 (range 10)))))
+                  (sha512-message-digest)
+                  sha512-message-digest)) ;; 19.8 us
+
+
+  (bench (-coerce (into {} (map vec (partition 2 (range 10))))
+                  (sha512-message-digest)
+                  sha512-message-digest)) ;; 23.5 us
+
+  (def million-set (doall (into #{} (range 1000000)))) ;; 1.85 secs
+
+  (bench (-coerce million-set (sha512-message-digest) sha512-message-digest))
+
+  (def million-seq3 (doall (repeat 1000000 "hello world"))) ;; 774 msecs
+
+  (bench (-coerce million-seq3 (sha512-message-digest) sha512-message-digest))
+
+  (def million-seq4 (doall (repeat 1000000 :foo/bar))) ;; 607 msecs
+
+  (bench (-coerce million-seq4 (sha512-message-digest) sha512-message-digest))
 
   (def datom-vector (doall (vec (repeat 10000 {:db/id 18239
                                                :person/name "Frederic"
                                                :person/familyname "Johanson"
                                                :person/street "Fifty-First Street 53"
                                                :person/postal 38237
-                                               :person/telefon "02343248474"
-                                               :person/weeight 0.3823}))))
+                                               :person/phone "02343248474"
+                                               :person/weight 38.23}))))
 
-  (bench (-coerce datom-vector (sha512-message-digest) sha512-message-digest)) ;; 800 ms
+  (time (-coerce datom-vector (sha512-message-digest) sha512-message-digest))
+  (bench (-coerce datom-vector (sha512-message-digest) sha512-message-digest)) ;; 246 ms
 
   (time (r/fold (fn ([] (byte-array 128))
                   ([^bytes acc ^bytes elem]
@@ -286,46 +307,9 @@ Our hash version is coded in first 2 bits."
                   (-coerce [k v] (sha512-message-digest) sha512-message-digest))
                 million-map))
 
-  (let [               ;million-words (doall (repeat 1000000 "hello"))
-        resetable-md (sha512-message-digest)]
-    (bench (-coerce million-set resetable-md sha512-message-digest))
-    #_(time (hash-imap million-map) ) ;; 3 secs
-    )
-
-  (let [val (into {} (doall (map vec (partition 2
-                                                (interleave (range 1000000)
-                                                            (range 1000000 2000000))))))]
-    (bench (-coerce val (sha512-message-digest) sha512-message-digest)))
 
 
-  (bench (-coerce million-set (sha512-message-digest) sha512-message-digest))
 
-  (defn hash-combine [seed hash]
-                                        ; a la boost
-    (bit-xor seed (+ hash 0x9e3779b9
-                     (bit-shift-left seed 6)
-                     (bit-shift-right seed 2))))
-
-  (defn- hash-coll [coll]
-    (if (seq coll)
-      (loop [res (hash (first coll)) s (next coll)]
-        (if (nil? s)
-          res
-          (recur (hash-combine res (hash (first s))) (next s))))
-      0))
-
-  (defn- hash-imap [m]
-    ;; a la clojure.lang.APersistentMap
-    (loop [h 0 s (seq m)]
-      (if s
-        (let [e (first s)]
-          (recur (mod (+ h (bit-xor (hash (key e)) (hash (val e))))
-                      4503599627370496)
-                 (next s)))
-        h)))
-
-  (= (hash-imap {:hello :world})
-     (hash-imap {:world :hello}))
 
   ;; if not single or few byte values, but at least 8 byte size factor per item ~12x
   ;; factor for single byte ~100x
@@ -334,45 +318,35 @@ Our hash version is coded in first 2 bits."
   (def barrs (doall (take (* 1024 1024 10) (repeat (byte-array 1 (byte 42))))
                     #_(map byte-array (partition 1 barr))))
 
-  (bench (-coerce barr (sha512-message-digest) sha512-message-digest))
-
-  (let []
-    (time (-coerce barr (sha512-message-digest) sha512-message-digest)) ;; 882 msecs
-    #_(let [md (MessageDigest/getInstance "sha-1")] ;; 350 msecs
-        (time (do (.update md barr)
-                  (.digest md))))
-    #_(let [md (MessageDigest/getInstance "sha-1")]
-        (time (doall (map (fn [^bytes barr]
-                            (.update md barr)
-                            (.digest md)) barrs))))
-    #_(let [md (MessageDigest/getInstance "sha-1")] ;; 32 secs without encoding, 50 secs with
-        (time (doall (map (fn [^bytes barr]
-                            (let [len (count barr)
-                                  barr2 (byte-array (* len 2))]
-                              (loop [i 0]
-                                (when-not (= i len)
-                                  (let [e (aget barr i)]
-                                    (aset barr2 (* i 2) e)
-                                    (when (and (> e (byte 0))
-                                               (< e (byte 30)))
-                                      (aset barr2 (inc (* i 2)) e)))
-                                  (recur (inc i))))
-                              (.update md barr2))) barrs)))
-        (println (map byte (time (.digest md)))))
-    #_(let [md (MessageDigest/getInstance "sha-1")] ;; 32 secs without encoding, 50 secs with
-        (time (doall (map #(.update md (encode (:binary magics) %)) barrs)))
-        (println (map byte (time (.digest md)))))
-    #_(time (hash-coll barrs)) ;; 20 secs
-    nil)
-
-                                        ;  [<0> <<>>, <7> <<117>>] ;; binary + integer bytes
-                                        ;    0,       7, 1,1,7,1,1,7
-                                        ;  [<0> <<7 1 1>>>]          ;; binary collision
-                                        ;    0,       7, 1,1,7,1,1
-
-  ;; prehash map entries to make xor less collisionary
-  ;; padded-coerce with mapping over entries as vectors with coerce should be fine
-  ;; but not as cheap as on seqs
+  (bench (-coerce barr (sha512-message-digest) sha512-message-digest)) ;; 1.99 secs
 
 
-  (def arr (into-array Byte/TYPE (take (* 1024) (repeatedly #(- (rand-int 256) 128))))))
+  (def arr (into-array Byte/TYPE (take (* 1024) (repeatedly #(- (rand-int 256) 128)))))
+
+
+  ;; hasch 0.2.3
+  (use 'criterium.core)
+
+  (def million-map (into {} (doall (map vec (partition 2
+                                                       (interleave (range 1000000)
+                                                                   (range 1000000 2000000)))))))
+
+  (bench (uuid million-map)) ;; 27 secs
+
+  (def million-seq3 (doall (repeat 1000000 "hello world")))
+
+  (bench (uuid million-seq3)) ;; 16 secs
+
+
+  (def datom-vector (doall (vec (repeat 10000 {:db/id 18239
+                                               :person/name "Frederic"
+                                               :person/familyname "Johanson"
+                                               :person/street "Fifty-First Street 53"
+                                               :person/postal 38237
+                                               :person/telefon "02343248474"
+                                               :person/weeight 0.3823}))))
+
+  (bench (uuid datom-vector)) ;; 2.6 secs
+
+
+  )
