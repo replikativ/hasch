@@ -71,7 +71,7 @@ The library is designed safety first, speed second. I have put quite some though
 
 The first versions were just build around safety, but perform poorly with large values. The speed should be sufficient to be in the same order of magnitude as transmission speed (throughput + latency) over slow to mid-range internet broadband connections. If you want to transmit larger values fast, you maybe can chose a sequential binary encoding with native hashing speed. JavaScript performance is still significantly slower (~10x), seemingly due to the lack of native SHA hashing routines.
 
-*These are just micro-benchmarks on my 3 year laptop, I just mention them so you can get an impression. *
+*These are just micro-benchmarks on my 3 year old laptop, I just mention them so you can get an impression. *
 
 ~~~clojure
 ;; most important and worst case, what can be done?
@@ -210,9 +210,10 @@ You can avoid the pr-str/read-string step (also effectively allocating double me
 
 
 # TODO
+- Use test.check/double.check property based tests between Java and JS (?)
+- Ensure runtime edn types are implemented.
 - Gracefully cover serialisation (reading) exceptions for records.
 - Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a peristent data-structure tree by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [geschichte](https://github.com/ghubber/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
-- Use test.check/double.check property based tests?
 - If keeping sorted maps/sets is feasable for high-throughput applications, allow to hash them sequentally.
 
 ## License

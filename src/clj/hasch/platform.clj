@@ -1,11 +1,13 @@
 (ns hasch.platform
   "Platform specific implementations."
-  (:require [hasch.benc :refer [magics IHashCoercion -coerce
-                                digest coerce-seq xor-hashes encode-safe]]
-            [clojure.edn :as edn])
-  (:import java.security.MessageDigest
+  (:require [hasch.benc :refer [split-size encode-safe]]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [hasch.benc :refer [magics IHashCoercion -coerce
+                                digest coerce-seq xor-hashes encode-safe]])
+  (:import java.io.ByteArrayOutputStream
            java.nio.ByteBuffer
-           java.io.ByteArrayOutputStream))
+           java.security.MessageDigest))
 
 (set! *warn-on-reflection* true)
 
@@ -134,7 +136,28 @@ Our hash version is coded in first 2 bits."
   java.lang.Object ;; for custom deftypes that might be printable (but generally not)
   (-coerce [this md-create-fn]
     (let [[tag val] (as-value this)]
-      (encode (:literal magics) (coerce-seq [tag val] md-create-fn)))))
+      (encode (:literal magics) (coerce-seq [tag val] md-create-fn))))
+
+  ;; not ideal, InputStream might be more flexible
+  ;; file is used due to length knowledge
+  java.io.File
+  (-coerce [f md-create-fn]
+    (let [^MessageDigest md (md-create-fn)
+          len (.length f)]
+      (with-open [fis (java.io.FileInputStream. f)]
+        (encode (:binary magics)
+                ;; support default split-size behaviour transparently
+                (if (< len split-size)
+                  (let [ba (with-open [out (java.io.ByteArrayOutputStream.)]
+                             (clojure.java.io/copy fis out)
+                             (.toByteArray out))]
+                    (encode-safe ba md-create-fn))
+                  (let [ba (byte-array (* 1024 1024))]
+                    (loop [size (.read fis ba)]
+                      (if (neg? size) (.digest md)
+                          (do
+                            (.update md ba 0 size)
+                            (recur (.read fis ba))))))))))))
 
 
 (extend (Class/forName "[B")
@@ -146,6 +169,22 @@ Our hash version is coded in first 2 bits."
 
 
 (comment
+  (require '[clojure.java.io :as io])
+  (def foo (io/file "/tmp/foo"))
+  (.length foo)
+
+  (defn slurp-bytes
+    "Slurp the bytes from a slurpable thing"
+    [x]
+    (with-open [out (java.io.ByteArrayOutputStream.)]
+      (clojure.java.io/copy (clojure.java.io/input-stream x) out)
+      (.toByteArray out)))
+
+  (clojure.reflect/reflect foo)
+  (= (map byte (-coerce (io/file "/tmp/bar") sha512-message-digest))
+     (map byte (-coerce (slurp-bytes "/tmp/bar") sha512-message-digest)))
+
+
   (map byte (-coerce {:hello :world :foo :bar 1 2} sha512-message-digest))
 
   (map byte (-coerce #{1 2 3} sha512-message-digest))
