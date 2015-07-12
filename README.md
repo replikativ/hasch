@@ -38,7 +38,7 @@ Then you can access the major function through `hasch.core`:
 
 Add this to your leiningen project's dependencies:
 ~~~clojure
-[net.polyc0l0r/hasch "0.3.0-beta2"]
+[es.topiq/hasch "0.3.0-beta3"]
 ~~~
 
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independant of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independant fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
