@@ -2,13 +2,10 @@
   (:require [hasch.core :refer [edn-hash uuid]]
             [hasch.benc :refer [xor-hashes]]
             [hasch.platform :refer [uuid5 sha512-message-digest hash->str as-value]]
-            #+clj  [clojure.test :as t
-                    :refer (is deftest with-test run-tests testing)]
-            #+cljs [cemerick.cljs.test :as t])
-  #+cljs (:require-macros [cemerick.cljs.test
-                           :refer (is deftest with-test run-tests testing test-var)]))
+            [clojure.test :as t
+             :refer (is deftest with-test run-tests testing)] #?(:cljs :include-macros)))
 
-#+cljs (def byte-array into-array)
+#?(:cljs (def byte-array into-array))
 
 (defrecord Bar [name])
 
@@ -59,7 +56,7 @@
     (is (= (edn-hash  #uuid "242525f1-8ed7-5979-9232-6992dd1e11e4")
            '(42 243 183 237 233 94 246 1 110 56 231 49 64 217 181 17 108 11 120 199 223 53 149 47 49 8 109 94 127 93 250 51 167 211 25 31 3 171 149 67 23 245 38 248 40 31 199 211 162 242 120 99 187 6 29 237 53 174 22 192 27 159 227 164)))
 
-    (is (= (edn-hash (#+clj java.util.Date. #+cljs js/Date. 1000000000000))
+    (is (= (edn-hash (#?(:clj java.util.Date. :cljs js/Date.) 1000000000000))
            '(177 226 212 235 221 67 176 34 184 69 101 45 117 193 95 187 54 50 210 149 10 193 10 67 220 174 25 99 176 115 250 216 29 49 148 167 52 86 203 90 30 170 62 149 115 102 109 120 128 62 2 213 188 41 203 91 202 106 142 100 119 160 26 3)))
 
     (is (= (edn-hash 'core/+)
@@ -82,8 +79,8 @@
            '(194 16 151 144 95 224 245 28 219 137 32 192 218 166 162 177 32 154 132 5 111 169 220 211 204 164 67 231 51 96 248 217 77 78 28 136 150 212 202 152 45 167 120 241 14 152 250 246 187 113 212 216 204 46 163 107 91 24 91 0 72 38 4 31)))
 
 
-    (is (= (edn-hash #+cljs (js/Uint8Array. #js [1 2 3 42 149])
-                     #+clj (byte-array [1 2 3 42 149]))
+    (is (= (edn-hash #?(:cljs (js/Uint8Array. #js [1 2 3 42 149])
+                        :clj (byte-array [1 2 3 42 149])))
            '(135 209 248 171 162 90 41 221 173 216 64 218 222 93 242 60 243 5 190 153 101 194 74 130 55 184 84 148 167 94 210 250 140 211 6 234 221 25 113 83 153 75 180 4 194 163 178 197 243 126 27 172 248 169 161 90 102 172 160 98 249 32 42 157)))))
 
 (deftest padded-coercion

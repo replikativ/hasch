@@ -37,9 +37,8 @@ Then you can access the major function through `hasch.core`:
 # Upcoming version 0.3.0 (will be stable hashing scheme)
 
 Add this to your leiningen project's dependencies:
-~~~clojure
-[es.topiq/hasch "0.3.0-beta3"]
-~~~
+[![Clojars Project](http://clojars.org/es.topiq/hasch/latest-version.svg)](http://clojars.org/es.topiq/hasch)
+
 
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independant of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independant fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
 You can then create UUID5 (using SHA-512) from it. Alternatively you can use your own hash function, but this is not standardized and hence beyond the spec.
@@ -210,9 +209,8 @@ You can avoid the pr-str/read-string step (also effectively allocating double me
 
 
 # TODO
+- Ensure grounded tagged literals are hashed the same as records
 - Use test.check/double.check property based tests between Java and JS (?)
-- Ensure runtime edn types are implemented.
-- Gracefully cover serialisation (reading) exceptions for records.
 - Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a peristent data-structure tree by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [geschichte](https://github.com/ghubber/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
 - If keeping sorted maps/sets is feasable for high-throughput applications, allow to hash them sequentally.
 

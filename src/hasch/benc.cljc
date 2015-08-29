@@ -1,12 +1,13 @@
 (ns hasch.benc
   "Binary encoding of EDN values."
-  #+clj (:import java.security.MessageDigest
-                 java.io.ByteArrayOutputStream))
+  #?@(:clj [(:import java.security.MessageDigest
+                     java.io.ByteArrayOutputStream)]))
 
-#+clj (set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
-(defprotocol IHashCoercion
+(defprotocol PHashCoercion
   (-coerce [this md-create-fn]))
+
 
 ;; changes break hashes!
 (def magics {:nil (byte 0)
@@ -28,7 +29,7 @@
 
 (def max-entropy-byte-count 32)
 
-#+cljs (defn- byte-array [len] (into-array (repeat len 0)))
+#?(:cljs (defn- byte-array [len] (into-array (repeat len 0))))
 
 (defn ^bytes digest
   [bytes-or-seq-of-bytes md-create-fn]
@@ -73,9 +74,9 @@
                        (< e (byte 30)))
               (aset ea i (byte 1))))
           (recur (inc i))))
-      #+clj (let [out (ByteArrayOutputStream.)]
-              (.write out a)
-              (.write out ea)
-              (.toByteArray out))
-      #+cljs (.concat a ea))
+      #?(:clj (let [out (ByteArrayOutputStream.)]
+               (.write out a)
+               (.write out ea)
+               (.toByteArray out))
+         :cljs (.concat a ea)))
     (digest a md-create-fn)))

@@ -3,7 +3,7 @@
   (:require [hasch.benc :refer [split-size encode-safe]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [hasch.benc :refer [magics IHashCoercion -coerce
+            [hasch.benc :refer [magics PHashCoercion -coerce
                                 digest coerce-seq xor-hashes encode-safe]])
   (:import java.io.ByteArrayOutputStream
            java.nio.ByteBuffer
@@ -15,7 +15,7 @@
   "Transforms runtime specific records by printing and reading with a default tagged reader.
 This is hence is as slow as pr-str and read-string."
   [v]
-  (edn/read-string {:default (fn [tag val] [tag val])}
+  (edn/read-string {:default (fn [tag val] (println "TAGGGG:" tag "VALLL:" val) [tag val])}
                    (pr-str v)))
 
 (defn uuid4
@@ -35,6 +35,9 @@ This is hence is as slow as pr-str and read-string."
 
 (defn ^MessageDigest sha512-message-digest []
   (MessageDigest/getInstance "sha-512"))
+
+(defn ^MessageDigest md5-message-digest []
+  (MessageDigest/getInstance "md5"))
 
 (defn uuid5
   "Generates a UUID version 5 from a sha-1 hash byte sequence.
@@ -61,7 +64,7 @@ Our hash version is coded in first 2 bits."
 (defn- ^bytes str->utf8 [x]
   (-> x str (.getBytes "UTF-8")))
 
-(extend-protocol IHashCoercion
+(extend-protocol PHashCoercion
   java.lang.Boolean
   (-coerce [this md-create-fn]
     (encode (:boolean magics) (byte-array 1 (if this (byte 41) (byte 40)))))
@@ -161,7 +164,7 @@ Our hash version is coded in first 2 bits."
 
 
 (extend (Class/forName "[B")
-  IHashCoercion
+  PHashCoercion
   {:-coerce (fn [^bytes this md-create-fn]
               (encode (:binary magics) (encode-safe this md-create-fn)))})
 
@@ -204,6 +207,8 @@ Our hash version is coded in first 2 bits."
   (def million-seq2 (doall (range 1000000)))
 
   (bench (-coerce million-seq2 sha512-message-digest)) ;; 296 ms
+
+  (bench (-coerce million-seq2 md5-message-digest))
 
   (take 10 (time (into (sorted-set) (range 1e6)))) ;; 1.7 s
 

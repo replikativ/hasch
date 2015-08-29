@@ -1,6 +1,6 @@
 (ns hasch.core
   "Hashing functions for EDN."
-  (:require [hasch.benc :refer [IHashCoercion -coerce digest]]
+  (:require [hasch.benc :refer [PHashCoercion -coerce digest]]
             [hasch.platform :as platform]))
 
 (def uuid4 platform/uuid4)

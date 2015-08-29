@@ -2,7 +2,7 @@
   (:require [goog.crypt.Sha512]
             [cljs.reader :as reader]
             [clojure.string]
-            [hasch.benc :refer [magics IHashCoercion -coerce
+            [hasch.benc :refer [magics PHashCoercion -coerce
                                 digest coerce-seq xor-hashes encode-safe]]))
 
 #_(do
@@ -111,7 +111,7 @@ Our hash version is coded in first 2 bits."
 (defn- str->utf8 [x]
   (-> x str utf8))
 
-(extend-protocol IHashCoercion
+(extend-protocol PHashCoercion
   nil
   (-coerce [this md-create-fn]
     (encode (:nil magics) #js[]))
