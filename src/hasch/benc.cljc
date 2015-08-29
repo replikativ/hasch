@@ -31,30 +31,30 @@
 
 #?(:cljs (defn- byte-array [len] (into-array (repeat len 0))))
 
-(defn ^bytes digest
+(defn  digest
   [bytes-or-seq-of-bytes md-create-fn]
   (let [^MessageDigest md (md-create-fn)]
     (if (seq? bytes-or-seq-of-bytes)
-      (doseq [^bytes bs bytes-or-seq-of-bytes]
+      (doseq [ bs bytes-or-seq-of-bytes]
         (.update md bs))
-      (.update md  ^bytes bytes-or-seq-of-bytes))
+      (.update md   bytes-or-seq-of-bytes))
      (.digest md)))
 
-(defn ^bytes coerce-seq [seq md-create-fn]
+(defn  coerce-seq [seq md-create-fn]
   (let [^MessageDigest seq-md (md-create-fn)]
     (loop [s seq]
       (let [f (first s)]
         (when f
-          (.update seq-md  ^bytes (-coerce f md-create-fn))
+          (.update seq-md   (-coerce f md-create-fn))
           (recur (rest s)))))
     (.digest seq-md)))
 
-(defn ^bytes xor-hashes
+(defn  xor-hashes
   "Commutatively coerces elements of collection, seq entries must already be crypto hashes
   to avoid collisions in XOR. Takes at maximum 32 bytes into account."
   [seq]
-  (let [len (min (count  ^bytes (first seq)) max-entropy-byte-count)]
-    (reduce (fn [ ^bytes acc  ^bytes elem]
+  (let [len (min (count   (first seq)) max-entropy-byte-count)]
+    (reduce (fn [  acc   elem]
               (loop [i 0]
                 (when (< i len)
                   (aset acc i (byte (bit-xor (aget acc i) (aget elem i))))
@@ -63,7 +63,7 @@
             (byte-array len)
             seq)))
 
-(defn ^bytes encode-safe [^bytes a md-create-fn]
+(defn  encode-safe [ a md-create-fn]
   (if (< (count a) split-size)
     (let [len (long (alength a))
           ea (byte-array len)]

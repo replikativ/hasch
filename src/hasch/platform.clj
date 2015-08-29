@@ -3,6 +3,7 @@
   (:require [hasch.benc :refer [split-size encode-safe]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.core.typed :as t]
             [hasch.benc :refer [magics PHashCoercion -coerce
                                 digest coerce-seq xor-hashes encode-safe]])
   (:import java.io.ByteArrayOutputStream
@@ -11,6 +12,8 @@
 
 (set! *warn-on-reflection* true)
 
+(t/ann edn/read-string [t/Str -> t/Any])
+(t/ann as-value [t/Any -> t/Any])
 (defn as-value ;; TODO maybe use transit json in memory?
   "Transforms runtime specific records by printing and reading with a default tagged reader.
 This is hence is as slow as pr-str and read-string."
@@ -18,11 +21,16 @@ This is hence is as slow as pr-str and read-string."
   (edn/read-string {:default (fn [tag val] (println "TAGGGG:" tag "VALLL:" val) [tag val])}
                    (pr-str v)))
 
+(t/non-nil-return java.util.UUID/randomUUID :all)
+(t/ann uuid4 [-> java.util.UUID])
 (defn uuid4
   "Generates a UUID version 4 (random)."
   []
   (java.util.UUID/randomUUID))
 
+(t/non-nil-return java.lang.Integer/toString :all)
+(t/non-nil-return java.lang.String/substring :all)
+(t/ann byte->hex [java.lang.Byte -> t/Str])
 (defn byte->hex [b]
   (-> b
       (bit-and 0xff)
@@ -30,12 +38,16 @@ This is hence is as slow as pr-str and read-string."
       (Integer/toString 16)
       (.substring 1)))
 
-(defn hash->str [bytes]
+(t/ann hash->str [t/ASeq -> t/Str])
+(defn hash->str [^bytes bytes]
   (apply str (map byte->hex bytes)))
 
+(t/non-nil-return java.security.MessageDigest/getInstance :all)
+(t/ann sha512-message-digest [-> MessageDigest])
 (defn ^MessageDigest sha512-message-digest []
   (MessageDigest/getInstance "sha-512"))
 
+(t/ann sha512-message-digest [-> MessageDigest])
 (defn ^MessageDigest md5-message-digest []
   (MessageDigest/getInstance "md5"))
 
@@ -55,13 +67,13 @@ Our hash version is coded in first 2 bits."
                          (bit-set 63)
                          (bit-clear 62)))))
 
-(defn ^bytes encode [^Byte magic ^bytes a]
+(defn  encode [^Byte magic  a]
   (let [out (ByteArrayOutputStream.)]
     (.write out (byte-array 1 magic))
     (.write out a)
     (.toByteArray out)))
 
-(defn- ^bytes str->utf8 [x]
+(defn-  str->utf8 [x]
   (-> x str (.getBytes "UTF-8")))
 
 (extend-protocol PHashCoercion
@@ -165,7 +177,7 @@ Our hash version is coded in first 2 bits."
 
 (extend (Class/forName "[B")
   PHashCoercion
-  {:-coerce (fn [^bytes this md-create-fn]
+  {:-coerce (fn [ this md-create-fn]
               (encode (:binary magics) (encode-safe this md-create-fn)))})
 
 
