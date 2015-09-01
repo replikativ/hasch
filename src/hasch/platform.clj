@@ -12,7 +12,7 @@
 
 (set! *warn-on-reflection* true)
 
-(t/ann edn/read-string [t/Str -> t/Any])
+(t/ann ^:no-check clojure.edn/read-string [t/Any t/Str -> t/Any])
 (t/ann as-value [t/Any -> t/Any])
 (defn as-value ;; TODO maybe use transit json in memory?
   "Transforms runtime specific records by printing and reading with a default tagged reader.
@@ -38,7 +38,7 @@ This is hence is as slow as pr-str and read-string."
       (Integer/toString 16)
       (.substring 1)))
 
-(t/ann hash->str [t/ASeq -> t/Str])
+(t/ann hash->str [(t/Seqable java.lang.Byte) -> t/Str])
 (defn hash->str [^bytes bytes]
   (apply str (map byte->hex bytes)))
 
@@ -51,6 +51,11 @@ This is hence is as slow as pr-str and read-string."
 (defn ^MessageDigest md5-message-digest []
   (MessageDigest/getInstance "md5"))
 
+;; HACKs around missing array types
+(t/ann ^:no-check byte-array [(t/Seqable java.lang.Byte) -> (t/Seqable java.lang.Byte)])
+(t/ann ^:no-check java.nio.ByteBuffer/wrap [(t/Seqable java.lang.Byte) -> java.nio.ByteBuffer])
+(t/non-nil-return java.nio.ByteBuffer/wrap :all)
+(t/ann uuid5 [(t/Seqable java.lang.Byte) -> java.util.UUID])
 (defn uuid5
   "Generates a UUID version 5 from a sha-1 hash byte sequence.
 Our hash version is coded in first 2 bits."
@@ -62,18 +67,27 @@ Our hash version is coded in first 2 bits."
                          (bit-or 0x0000000000005000)
                          (bit-and 0x7fffffffffff5fff)
                          (bit-clear 63) ;; needed because of BigInt cast of bitmask
-                         (bit-clear 62))
+                         (bit-clear 62)
+                         long)
                      (-> low
                          (bit-set 63)
-                         (bit-clear 62)))))
+                         (bit-clear 62)
+                         long))))
 
-(defn  encode [^Byte magic  a]
+(t/ann ^:no-check java.io.ByteArrayOutputStream/toByteArray
+       [java.io.ByteArrayOutputStream -> (t/Seqable java.lang.Byte)])
+(t/ann ^:no-check java.io.ByteArrayOutputStream/write
+       [java.io.ByteArrayOutputStream (t/Seqable java.lang.Byte) -> t/Nothing])
+(t/ann encode [java.lang.Byte (t/Seqable java.lang.Byte) -> (t/Seqable java.lang.Byte)])
+(defn encode [^Byte magic  a]
   (let [out (ByteArrayOutputStream.)]
     (.write out (byte-array 1 magic))
     (.write out a)
     (.toByteArray out)))
 
-(defn-  str->utf8 [x]
+(t/non-nil-return java.lang.String/getBytes :all)
+(t/ann str->utf8 [t/Any -> (t/Seqable java.lang.Byte)])
+(defn- str->utf8 [x]
   (-> x str (.getBytes "UTF-8")))
 
 (extend-protocol PHashCoercion
