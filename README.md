@@ -198,15 +198,14 @@ nil
 
 ## Extension to your own types
 
-*Warning*: Getting all that right is not trivial. Don't mess with hashing extension if you don't have to, just make your type uniquely printable/readable to edn-primitives!
+*Warning*: Getting all that right is not trivial. Don't mess with hashing extension if you don't have to, just make your type uniquely mappable with [incognito](https://github.com/replikativ/incognito)!
 
-You can avoid the pr-str/read-string step (also effectively allocating double memory) by extending the `IHashCoercion` protocol to your types. You should orient on the `IRecord` implementation and must use `(:literal magics)` to avoid collisions with literal values of the same form. Either by using the default serialisation mechanism to retrieve a hash-value or by extending the hash-coercion, your serialisation (pr-str) or coercion must satisfy the *equality relation*:
+You can avoid the mapping step to Clojure datastructures (also effectively allocating double memory) by extending the `IHashCoercion` protocol to your types. You should orient on the `IRecord` implementation and must use `(:literal magics)` to avoid collisions with literal values of the same form. Either by using the default serialisation mechanism to retrieve a hash-value or by extending the hash-coercion, your serialisation or coercion must satisfy the *equality relation*:
 
 - hashes *must* follow `IEquiv` equality of Clojure(Script): `(= a b) <=> (= (edn-hash a) (edn-hash b))`, `(not= a b) <=> (not= (edn-hash a) (edn-hash b))`: Your serialisation has to be *unique*, hashing has to be injective or in other words you might not introduce collisions. Non-equal objects must have non-equal hashes.
 - *reflexivity*: `(= (edn-hash a) (edn-hash a))`, including on different runtimes
 - *symmetry*: `(= (edn-hash a) (edn-hash b)) <=> (= (edn-hash b) (edn-hash a))` (trivial because of `=`)
 - *transitivity*: `(and (= (edn-hash a) (edn-hash b)) (= (edn-hash b) (edn-hash c))) => (= (edn-hash a) (edn-hash c))` (also trivial because of `=`)
-- If you implement *both* pr-str serialisation and hash-coercion, your hash *must* match the default non-extended hash for your (printable) type. In other words implementing `IHashCoercion` must be transparent compared to using the default serialisation. You should implement both printing and coercion if you implement coercion, otherwise you might corrupt hashes later by accidentally creating a different pr-str serialisation.
 
 
 # TODO
