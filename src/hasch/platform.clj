@@ -3,20 +3,15 @@
   (:require [hasch.benc :refer [split-size encode-safe]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [incognito.base :as ib]
             [hasch.benc :refer [magics PHashCoercion -coerce
                                 digest coerce-seq xor-hashes encode-safe]])
   (:import java.io.ByteArrayOutputStream
            java.nio.ByteBuffer
            java.security.MessageDigest))
 
-(set! *warn-on-reflection* true)
 
-(defn as-value ;; TODO maybe use transit json in memory?
-  "Transforms runtime specific records by printing and reading with a default tagged reader.
-This is hence is as slow as pr-str and read-string."
-  [v]
-  (edn/read-string {:default (fn [tag val] (println "TAGGGG:" tag "VALLL:" val) [tag val])}
-                   (pr-str v)))
+(set! *warn-on-reflection* true)
 
 (defn uuid4
   "Generates a UUID version 4 (random)."
@@ -66,85 +61,87 @@ Our hash version is coded in first 2 bits."
 
 (extend-protocol PHashCoercion
   java.lang.Boolean
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:boolean magics) (byte-array 1 (if this (byte 41) (byte 40)))))
 
   ;; don't distinguish characters from string for javascript
   java.lang.Character
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:string magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   java.lang.String
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:string magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   java.lang.Integer
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.lang.Long
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.lang.Float
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.lang.Double
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.util.UUID
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:uuid magics) (.getBytes (.toString this) "UTF-8")))
 
   java.util.Date
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:inst magics) (.getBytes (.toString ^java.lang.Long (.getTime this)) "UTF-8")))
 
   nil
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:nil magics) (byte-array 0)))
 
   clojure.lang.Symbol
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:symbol magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   clojure.lang.Keyword
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:keyword magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   clojure.lang.ISeq
-  (-coerce [this md-create-fn]
-    (encode (:seq magics) (coerce-seq this md-create-fn)))
+  (-coerce [this md-create-fn write-handlers]
+    (encode (:seq magics) (coerce-seq this md-create-fn write-handlers)))
 
   clojure.lang.IPersistentVector
-  (-coerce [this md-create-fn]
-    (encode (:vector magics) (coerce-seq this md-create-fn)))
+  (-coerce [this md-create-fn write-handlers]
+    (encode (:vector magics) (coerce-seq this md-create-fn write-handlers)))
+
+  incognito.base.IncognitoTaggedLiteral
+  (-coerce [this md-create-fn write-handlers]
+    (let [{:keys [tag value]} this]
+      (encode (:literal magics) (coerce-seq [tag value] md-create-fn write-handlers))))
+
+  clojure.lang.IRecord
+  (-coerce [this md-create-fn write-handlers]
+    (let [{:keys [tag value]} (ib/incognito-writer write-handlers this)]
+      (encode (:literal magics) (coerce-seq [tag value] md-create-fn write-handlers))))
 
   clojure.lang.IPersistentMap
-  (-coerce [this md-create-fn]
-    (if (record? this)
-      (let [[tag val] (as-value this)]
-        (encode (:literal magics) (coerce-seq [tag val] md-create-fn)))
-      (encode (:map magics) (xor-hashes (map #(-coerce % md-create-fn) (seq this))))))
+  (-coerce [this md-create-fn write-handlers]
+    (encode (:map magics) (xor-hashes (map #(-coerce % md-create-fn write-handlers) (seq this)))))
 
 
   clojure.lang.IPersistentSet
-  (-coerce [this md-create-fn]
-    (encode (:set magics) (xor-hashes (map #(digest (-coerce % md-create-fn)
+  (-coerce [this md-create-fn write-handlers]
+    (encode (:set magics) (xor-hashes (map #(digest (-coerce % md-create-fn write-handlers)
                                                     md-create-fn)
                                            (seq this)))))
-
-  java.lang.Object ;; for custom deftypes that might be printable (but generally not)
-  (-coerce [this md-create-fn]
-    (let [[tag val] (as-value this)]
-      (encode (:literal magics) (coerce-seq [tag val] md-create-fn))))
 
   ;; not ideal, InputStream might be more flexible
   ;; file is used due to length knowledge
   java.io.File
-  (-coerce [f md-create-fn]
+  (-coerce [f md-create-fn write-handlers]
     (let [^MessageDigest md (md-create-fn)
           len (.length f)]
       (with-open [fis (java.io.FileInputStream. f)]
@@ -165,7 +162,7 @@ Our hash version is coded in first 2 bits."
 
 (extend (Class/forName "[B")
   PHashCoercion
-  {:-coerce (fn [^bytes this md-create-fn]
+  {:-coerce (fn [^bytes this md-create-fn write-handlers]
               (encode (:binary magics) (encode-safe this md-create-fn)))})
 
 

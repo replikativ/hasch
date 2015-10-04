@@ -1,10 +1,11 @@
-(defproject io.replikativ/hasch "0.3.0-SNAPSHOT"
+(defproject io.replikativ/hasch "0.3.0-beta4"
   :description "Cryptographic hashing of EDN datastructures."
   :url "http://github.com/ghubber/hasch"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.48"]]
+                 [org.clojure/clojurescript "1.7.48"]
+                 [io.replikativ/incognito "0.1.0"]]
   :source-paths ["src"]
   :plugins [[lein-cljsbuild "1.0.6"]
             [com.cemerick/austin "0.1.6"]]

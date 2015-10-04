@@ -6,7 +6,7 @@
 #?(:clj (set! *warn-on-reflection* true))
 
 (defprotocol PHashCoercion
-  (-coerce [this md-create-fn]))
+  (-coerce [this md-create-fn write-handlers]))
 
 
 ;; changes break hashes!
@@ -40,12 +40,12 @@
       (.update md  ^bytes bytes-or-seq-of-bytes))
      (.digest md)))
 
-(defn ^bytes coerce-seq [seq md-create-fn]
+(defn ^bytes coerce-seq [seq md-create-fn write-handlers]
   (let [^MessageDigest seq-md (md-create-fn)]
     (loop [s seq]
       (let [f (first s)]
         (when f
-          (.update seq-md  ^bytes (-coerce f md-create-fn))
+          (.update seq-md  ^bytes (-coerce f md-create-fn write-handlers))
           (recur (rest s)))))
     (.digest seq-md)))
 

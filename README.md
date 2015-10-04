@@ -37,7 +37,7 @@ Then you can access the major function through `hasch.core`:
 # Upcoming version 0.3.0 (will be stable hashing scheme)
 
 Add this to your leiningen project's dependencies:
-[![Clojars Project](http://clojars.org/es.topiq/hasch/latest-version.svg)](http://clojars.org/es.topiq/hasch)
+[![Clojars Project](http://clojars.org/io.replikativ/hasch/latest-version.svg)](http://clojars.org/io.replikativ/hasch)
 
 
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independant of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independant fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
@@ -45,7 +45,7 @@ You can then create UUID5 (using SHA-512) from it. Alternatively you can use you
 
 ## Motivation
 
-The motivation is to exchange (potentially large) values in a hostile environment without conflicts. The concrete design motivation is to use the commit log of [geschichte](https://github.com/ghubber/geschichte) for exchange of datascript/datomic transaction logs. As long as you are in a trusted environment you can trust the random generator for conflict-free UUIDs as is done internally by many Clojure projects, but as soon as you distribute values, collisions can happen. Note that you can treat hasch's cryptographic UUIDs like random UUIDs internally and don't need to verify them.
+The motivation is to exchange (potentially large) values in a hostile environment without conflicts. The concrete design motivation is to use the commit log of [replikativ](https://github.com/replikativ/replikativ) for exchange of datascript/datomic transaction logs. As long as you are in a trusted environment you can trust the random generator for conflict-free UUIDs as is done internally by many Clojure projects, but as soon as you distribute values, collisions can happen. Note that you can treat hasch's cryptographic UUIDs like random UUIDs internally and don't need to verify them.
 
 ## Why not use Clojure's `hash`?
 
@@ -57,8 +57,8 @@ Sorting of heterogenous collections requires a unique serialization (e.g. pr-str
 
 ## edn support
 
-Support for edn types on the JVM (but not yet JavaScript) is complete including records. This works by printing the tagged-literal and rereading it as pure edn, which also ensures that the hashed value can be reproduced beyond the current runtime. Your type has to be pr-str-able for this to work. Records already have a default serialisation.
-
+Support for `edn` types is complete including records. This works according to [incognito](https://github.com/replikativ/incognito) by hashing unknown records the same as their known counterparts. You need to supply the optional `write-handlers` to `uuid` if your records have a custom serialization. Otherwise incognito records won't match.
+Importantly the JVM class names are converted into cljs format `foo.bar_baz.Bar` -> `foo.bar-baz/Bar` before hashing. While this potentially allows maliciously induced collisions, you are safe if you use `incognito` or a similar mapping for cross-platform support, as it automatically serializes all record tags accordingly.
 
 ## Safety
 
@@ -190,6 +190,7 @@ nil
 
 
 # Changes
+- 0.3.0-beta4 fix record serialization with incognito
 - 0.3.0 Overhaul encoding for ~10x-20x times performance on the JVM. Use safe SHA-512. Add byte-array support for blobs.
 - 0.2.3 properly dispatch on IRecord (instead of IMap)
 - 0.2.2 cannot coerce record tags because of conflicts, rather extend record to properly print
@@ -209,9 +210,8 @@ You can avoid the pr-str/read-string step (also effectively allocating double me
 
 
 # TODO
-- Ensure grounded tagged literals are hashed the same as records
 - Use test.check/double.check property based tests between Java and JS (?)
-- Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a peristent data-structure tree by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [geschichte](https://github.com/ghubber/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
+- Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a Merkle-tree like peristent data-structure by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [konserve](https://github.com/replikativ/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
 - If keeping sorted maps/sets is feasable for high-throughput applications, allow to hash them sequentally.
 
 ## License

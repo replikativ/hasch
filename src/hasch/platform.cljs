@@ -2,6 +2,7 @@
   (:require [goog.crypt.Sha512]
             [cljs.reader :as reader]
             [clojure.string]
+            [incognito.base :as ib]
             [hasch.benc :refer [magics PHashCoercion -coerce
                                 digest coerce-seq xor-hashes encode-safe]]))
 
@@ -10,16 +11,6 @@
     (def repl-env (reset! cemerick.austin.repls/browser-repl-env
                          (cemerick.austin/repl-env)))
     (cemerick.austin.repls/cljs-repl repl-env))
-
-(defn as-value
-  "Transforms runtime specific records by printing and reading with a default tagged reader."
-  [v]
-  (binding [reader/*tag-table* (atom (select-keys @reader/*tag-table*
-                                                  #{"inst" "uuid" "queue"}))
-            reader/*default-data-reader-fn*
-            (atom (fn [tag val] [tag val]))]
-    (reader/read-string (pr-str v))))
-
 
 ;; taken from https://github.com/whodidthis/cljs-uuid-utils/blob/master/src/cljs_uuid_utils.cljs
 ;; Copyright (C) 2012 Frank Siebenlist
@@ -113,65 +104,71 @@ Our hash version is coded in first 2 bits."
 
 (extend-protocol PHashCoercion
   nil
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:nil magics) #js[]))
 
   boolean
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:boolean magics) #js [(if this 41 40)]))
 
   string
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:string magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   number
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     ;; utf8 is not needed, can be optimized
     (encode (:number magics) (str->utf8 this)))
 
   js/Date
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     ;; utf8 is not needed, can be optimized
     (encode (:inst magics) (str->utf8 (.getTime this))))
 
   cljs.core/UUID
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:uuid magics) (str->utf8 (.-uuid this))))
 
   cljs.core/Symbol
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:symbol magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   cljs.core/Keyword
-  (-coerce [this md-create-fn]
+  (-coerce [this md-create-fn write-handlers]
     (encode (:keyword magics) (encode-safe (str->utf8 this) md-create-fn)))
 
   default
-  (-coerce [this md-create-fn]
-    (cond (satisfies? IRecord this)
-          (let [[tag val] (as-value this)]
-            (encode (:literal magics) (coerce-seq [tag val] md-create-fn)))
+  (-coerce [this md-create-fn write-handlers]
+    (cond (instance? ib/IncognitoTaggedLiteral this)
+          (let [{:keys [tag value]} this]
+            (encode (:literal magics) (coerce-seq [tag value] md-create-fn write-handlers)))
+
+          (satisfies? IRecord this)
+          (let [{:keys [tag value]} (ib/incognito-writer write-handlers this)]
+            (encode (:literal magics) (coerce-seq [tag value] md-create-fn write-handlers)))
 
           (satisfies? ISeq this)
-          (encode (:seq magics) (coerce-seq this md-create-fn))
+          (encode (:seq magics) (coerce-seq this md-create-fn write-handlers))
 
           (satisfies? IVector this)
-          (encode (:vector magics) (coerce-seq this md-create-fn))
+          (encode (:vector magics) (coerce-seq this md-create-fn write-handlers))
 
           (satisfies? IMap this)
-          (encode (:map magics) (xor-hashes (map #(-coerce % md-create-fn) (seq this))))
+          (encode (:map magics) (xor-hashes (map #(-coerce % md-create-fn write-handlers)
+                                                 (seq this))))
 
           (satisfies? ISet this)
-          (encode (:set magics) (xor-hashes (map #(digest (-coerce % md-create-fn) md-create-fn)
+          (encode (:set magics) (xor-hashes (map #(digest (-coerce % md-create-fn write-handlers)
+                                                          md-create-fn)
                                                  (seq this))))
 
           (instance? js/Uint8Array this)
           (encode (:binary magics) (encode-safe (js/Array.prototype.slice.call this) md-create-fn))
 
           :else
-          (let [[tag val] (as-value this)]
-            (encode (:literal magics)
-                    (coerce-seq [tag val] md-create-fn))))))
+          (throw (ex-info "Cannot hash unknown type, you can extend PHashCoercion protocol for:"
+                          {:type (type this)
+                           :value this})))))
 
 
 
@@ -203,5 +200,6 @@ Our hash version is coded in first 2 bits."
                                                :person/postal 38237
                                                :person/telefon "02343248474"
                                                :person/weeight 0.3823}))))
+
 
   (.log js/console "benchmarking: " (time (-coerce datom-vector sha512-message-digest))))
