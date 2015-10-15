@@ -1,5 +1,6 @@
 (ns hasch.core
   "Hashing functions for EDN."
+  #?(:cljs (:refer-clojure :exclude [uuid]))
   (:require [hasch.benc :refer [PHashCoercion -coerce digest]]
             [hasch.platform :as platform]))
 

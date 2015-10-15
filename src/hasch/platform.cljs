@@ -72,7 +72,7 @@ Our hash version is coded in first 2 bits."
                      "-" (apply str (take 4 (drop 12 s)))
                      "-" (apply str (take 4 (drop 16 s)))
                      "-" (apply str (drop 20 s)))))
-        UUID.)))
+        uuid)))
 
 (defn sha512-message-digest []
   (goog.crypt.Sha512.))
