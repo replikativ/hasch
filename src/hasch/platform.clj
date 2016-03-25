@@ -129,7 +129,10 @@ Our hash version is coded in first 2 bits."
 
   clojure.lang.IPersistentMap
   (-coerce [this md-create-fn write-handlers]
-    (encode (:map magics) (xor-hashes (map #(-coerce % md-create-fn write-handlers) (seq this)))))
+    (if (record? this) ;; BUG somehow records can also trigger the map sometimes (?)
+      (let [{:keys [tag value]} (ib/incognito-writer write-handlers this)]
+        (encode (:literal magics) (coerce-seq [tag value] md-create-fn write-handlers)))
+      (encode (:map magics) (xor-hashes (map #(-coerce % md-create-fn write-handlers) (seq this))))))
 
 
   clojure.lang.IPersistentSet

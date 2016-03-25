@@ -1,23 +1,18 @@
 # hasch
 
-*A new optimized hashing scheme is coming up with version 0.3.0, see below.*
-
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript, e.g. with SHA-1. Commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple printed edn string, but have the same hash value independant of order (read: always and everywhere). UTF-8 is supported for strings, symbols and keywords.
 You can also create UUID5 (using SHA-1) from it. Alternatively you can use your own hash function.
 
 Support for edn types on the JVM and JavaScript is complete including records. This works by printing the tagged-literal and rereading it as pure edn, which also ensures that the hashed value can be reproduced beyond the current runtime. Your type has to be pr-str-able for this to work. Records already have a default serialisation.
 
-## Maturity
+A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independant of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independant fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
+You can then create UUID5 (using SHA-512) from it. Alternatively you can use your own hash function, but this is not standardized and hence beyond the spec.
 
-The library is tested in cross-platform prototypes, but still very young and alpha-status, don't rely on it for strong consistency yet. The hashing scheme is stable now, but a breaking adjustment might still be necessary. You can stick to a version that works for you though, the code is little and can be maintained with your project.
+## Usage <a href="https://gitter.im/replikativ/replikativ?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge&amp;utm_content=badge"><img src="https://camo.githubusercontent.com/da2edb525cde1455a622c58c0effc3a90b9a181c/68747470733a2f2f6261646765732e6769747465722e696d2f4a6f696e253230436861742e737667" alt="Gitter" data-canonical-src="https://badges.gitter.im/Join%20Chat.svg" style="max-width:100%;"></a>
 
-## Usage
 
-Include in your `project.clj` for Leiningen 2+ with:
-
-~~~clojure
-[net.polyc0l0r/hasch "0.2.3"]
-~~~
+Add this to your leiningen project's dependencies:
+[![Clojars Project](http://clojars.org/io.replikativ/hasch/latest-version.svg)](http://clojars.org/io.replikativ/hasch)
 
 Then you can access the major function through `hasch.core`:
 
@@ -34,18 +29,15 @@ Then you can access the major function through `hasch.core`:
 (uuid "hello world") => #uuid "09c1649c-40c3-51cc-829c-dc781de2eda0"
 ~~~
 
-# Upcoming version 0.3.0 (will be stable hashing scheme)
-
-Add this to your leiningen project's dependencies:
-[![Clojars Project](http://clojars.org/io.replikativ/hasch/latest-version.svg)](http://clojars.org/io.replikativ/hasch)
-
-
-A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independant of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independant fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
-You can then create UUID5 (using SHA-512) from it. Alternatively you can use your own hash function, but this is not standardized and hence beyond the spec.
 
 ## Motivation
 
 The motivation is to exchange (potentially large) values in a hostile environment without conflicts. The concrete design motivation is to use the commit log of [replikativ](https://github.com/replikativ/replikativ) for exchange of datascript/datomic transaction logs. As long as you are in a trusted environment you can trust the random generator for conflict-free UUIDs as is done internally by many Clojure projects, but as soon as you distribute values, collisions can happen. Note that you can treat hasch's cryptographic UUIDs like random UUIDs internally and don't need to verify them.
+
+## Maturity
+
+The library is tested in cross-platform [applications](https://github.com/replikativ/topiq). The hashing scheme can be considered stable. It is versioned, so we can fix any severe bug without breaking stored hashes.
+
 
 ## Why not use Clojure's `hash`?
 
@@ -190,6 +182,7 @@ nil
 
 
 # Changes
+- 0.3.0 fix accidental hashing of records as maps
 - 0.3.0-beta4 fix record serialization with incognito
 - 0.3.0 Overhaul encoding for ~10x-20x times performance on the JVM. Use safe SHA-512. Add byte-array support for blobs.
 - 0.2.3 properly dispatch on IRecord (instead of IMap)
@@ -215,7 +208,7 @@ You can avoid the mapping step to Clojure datastructures (also effectively alloc
 
 ## License
 
-Copyright © 2014-2015 Christian Weilbach
+Copyright © 2014-2016 Christian Weilbach
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
