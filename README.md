@@ -19,14 +19,14 @@ Then you can access the major function through `hasch.core`:
 ~~~clojure
 (use 'hasch.core)
 (edn-hash ["hello world" {:a 3.14} #{42} '(if true nil \f)])
-=> (-104 -11 -108 -93 -66 119 -92 73 32 -75 -73 21 82 -31 -45 122 -31 115 27 -23)
+=> (120 75 53 36 42 91 14 22 174 251 7 222 83 57 158 140 192 131 251 17 176 29 252 118 83 2 106 187 223 17 84 232 24 103 183 27 19 174 222 37 246 138 132 126 172 46 249 42 62 46 66 32 33 100 88 168 4 242 90 25 5 228 2 88)
 
 (uuid5 (edn-hash "hello world"))
-=> #uuid "09c1649c-40c3-51cc-829c-dc781de2eda0"
+=> #uuid "1227fe0a-471b-5329-88db-875fb82737a8"
 
 ;; or just use the convenience multi-arity uuid fn:
 (uuid) => #uuid "a27dfbb9-b69a-4f08-8df4-471464bfeb37"
-(uuid "hello world") => #uuid "09c1649c-40c3-51cc-829c-dc781de2eda0"
+(uuid "hello world") => #uuid "1227fe0a-471b-5329-88db-875fb82737a8"
 ~~~
 
 
