@@ -182,6 +182,7 @@ nil
 
 
 # Changes
+- 0.3.1 fix bug in hashing sequences containing null
 - 0.3.0 fix accidental hashing of records as maps
 - 0.3.0-beta4 fix record serialization with incognito
 - 0.3.0 Overhaul encoding for ~10x-20x times performance on the JVM. Use safe SHA-512. Add byte-array support for blobs.

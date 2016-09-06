@@ -43,9 +43,9 @@
 (defn ^bytes coerce-seq [seq md-create-fn write-handlers]
   (let [^MessageDigest seq-md (md-create-fn)]
     (loop [s seq]
-      (let [f (first s)]
-        (when f
-          (.update seq-md  ^bytes (-coerce f md-create-fn write-handlers))
+      (let [[f & r] s]
+        (.update seq-md  ^bytes (-coerce f md-create-fn write-handlers))
+        (when-not (empty? r)
           (recur (rest s)))))
     (.digest seq-md)))
 
