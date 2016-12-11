@@ -206,6 +206,7 @@ You can avoid the mapping step to Clojure datastructures (also effectively alloc
 
 # Contributors
 - James Conroy-Finn
+- Konrad Kühne
 - Christian Weilbach
 
 ## License
