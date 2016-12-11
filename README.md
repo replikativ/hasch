@@ -1,4 +1,4 @@
-# hasch
+# hasch [![CircleCI](https://circleci.com/gh/replikativ/hasch.svg?style=shield&circle-token=8a654d85a02df68beb15a44d3505ff1e83ddc036)](https://circleci.com/gh/replikativ/hasch)
 
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independant of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independant fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
 You can then create UUID5 (using SHA-512) from it. Alternatively you can use your own hash function, but this is not standardized and hence beyond the spec.
@@ -204,9 +204,13 @@ You can avoid the mapping step to Clojure datastructures (also effectively alloc
 - Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a Merkle-tree like peristent data-structure by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [konserve](https://github.com/replikativ/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
 - If keeping sorted maps/sets is feasable for high-throughput applications, allow to hash them sequentally.
 
+# Contributors
+- James Conroy-Finn
+- Christian Weilbach
+
 ## License
 
-Copyright © 2014-2016 Christian Weilbach
+Copyright © 2014-2016 Christian Weilbach and contributors
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
