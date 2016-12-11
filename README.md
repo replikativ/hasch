@@ -179,6 +179,7 @@ nil
 
 
 # Changes
+- 0.3.2 Minimize dependencies, explicit profiles for different Clojure(Script) versions
 - 0.3.1 fix bug in hashing sequences containing null
 - 0.3.0 fix accidental hashing of records as maps
 - 0.3.0-beta4 fix record serialization with incognito
