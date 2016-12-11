@@ -5,9 +5,11 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha14" :scope "provided"]
                  [org.clojure/clojurescript "1.9.293" :scope "provided"]
-                 [io.replikativ/incognito "0.2.0"]]
+                 [io.replikativ/incognito "0.2.0" :exclusions [org.clojure/data.fressian
+                                                               com.cognitect/transit-clj
+                                                               com.cognitect/transit-cljs]]]
   :source-paths ["src"]
-  :plugins [[lein-cljsbuild "1.1.2"]]
+  :plugins [[lein-cljsbuild "1.1.4"]]
 
   :aliases {"all" ["with-profile" "default:+1.7:+1.8"]}
   :profiles {:dev {:dependencies [[criterium "0.4.4"]]
