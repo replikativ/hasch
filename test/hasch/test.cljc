@@ -104,6 +104,18 @@
 
 #_(run-tests)
 
+#?(:cljs
+   (deftest utf8-test
+     (is (= (utf8 "小鳩ちゃんかわいいなぁ")
+            #js [229 176 143 233 179 169 227 129 161 227 130 131 227 130 147 227
+                 129 139 227 130 143 227 129 132 227 129 132 227 129 170 227 129 129]))))
+
+#?(:cljs
+   (defn ^:export run
+     []
+     (enable-console-print!)
+     (run-tests)
+     #_(run-all-tests #_"hasch.*-test")))
 
 ;; fire up repl
 #_(do
