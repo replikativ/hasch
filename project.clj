@@ -40,16 +40,16 @@
       :optimizations :none
       :pretty-print true}}
     #_{:id "main"
-     :source-paths ["src"]
-     :compiler
-     {:output-to "resources/public/js/main.js"
-      :optimizations :advanced}}
+       :source-paths ["src"]
+       :compiler
+       {:output-to "resources/public/js/main.js"
+        :optimizations :advanced}}
     {:id "test"
      :source-paths ["src" "test"]
      :compiler
      {:output-to "resources/private/js/unit-test.js"
       :output-dir "resources/private/js/out"
       :optimizations :whitespace
-      :pretty-print true}}]
-   :test-commands {"unit-tests" ["phantomjs" "resources/private/js/test.js"
+    :pretty-print true}}]
+  :test-commands {"unit-tests" ["phantomjs" "resources/private/js/test.js"
                                  "resources/private/html/unit-test.html"]}})
