@@ -102,9 +102,8 @@
 
 (deftest squuid-test
   (testing "Sequential UUID functionality."
-    (is (= (squuid (uuid [1 2 3]))
-           #uuid "5914da46-5c15-555e-a1c8-6166a78fc808"))))
-
+    (is (= (subs (str (squuid (uuid [1 2 3]))) 24)
+           "6166a78fc808"))))
 
 #_(run-tests)
 
