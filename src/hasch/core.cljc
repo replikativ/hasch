@@ -32,15 +32,21 @@
 (defn squuid
   "Calculates a sequential UUID as described in
   https://github.com/clojure-cookbook/clojure-cookbook/blob/master/01_primitive-data/1-24_uuids.asciidoc"
-  ([] (squuid (java.util.UUID/randomUUID)))
+  ([] (squuid (uuid4)))
   ([uuid]
-   (let [time (System/currentTimeMillis)
-         secs (quot time 1000)
-         lsb (.getLeastSignificantBits uuid)
-         msb (.getMostSignificantBits uuid)
-         timed-msb (bit-or (bit-shift-left secs 32)
-                           (bit-and 0x00000000ffffffff msb))]
-     (java.util.UUID. timed-msb lsb))))
+   #?(:clj
+      (let [time (System/currentTimeMillis)
+            secs (quot time 1000)
+            lsb (.getLeastSignificantBits uuid)
+            msb (.getMostSignificantBits uuid)
+            timed-msb (bit-or (bit-shift-left secs 32)
+                              (bit-and 0x00000000ffffffff msb))]
+        (java.util.UUID. timed-msb lsb))
+      :cljs
+      (let [time (.getTime (js/Date.))
+            secs (quot time 1000)
+            prefix (.toString secs 16)]
+        (cljs.core/uuid (str prefix (subs (str uuid) 8)))))))
 
 
 
