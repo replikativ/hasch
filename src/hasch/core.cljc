@@ -2,6 +2,7 @@
   "Hashing functions for EDN."
   #?(:cljs (:refer-clojure :exclude [uuid]))
   (:require [hasch.benc :refer [PHashCoercion -coerce digest]]
+            [hasch.base64 :as b64]
             [hasch.platform :as platform]))
 
 (def uuid4 platform/uuid4)
@@ -49,5 +50,10 @@
         (cljs.core/uuid (str prefix (subs (str uuid) 8)))))))
 
 
-
+(defn b64-hash
+  "Provides a base64 encoded string of the edn-hash of a value val. This contains
+  all bits of the hash compared to 128 bits for the UUID-5. Both should be safe,
+  but b64-hash is safer towards collisions."
+  [val]
+  (b64/encode (byte-array (edn-hash val))))
 

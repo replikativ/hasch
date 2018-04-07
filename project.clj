@@ -5,7 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha14" :scope "provided"]
                  [org.clojure/clojurescript "1.9.293" :scope "provided"]
-                 [io.replikativ/incognito "0.2.1"]]
+                 [io.replikativ/incognito "0.2.1"]
+                 [org.clojure/data.codec "0.1.1"]]
   :source-paths ["src"]
   :plugins [[lein-cljsbuild "1.1.4"]]
 
@@ -47,7 +48,7 @@
     {:id "test"
      :source-paths ["src" "test"]
      :compiler
-     {:output-to "resources/private/js/unit-test.js"
+     {:output-to "resources/private/js/test.js"
       :output-dir "resources/private/js/out"
       :optimizations :whitespace
     :pretty-print true}}]

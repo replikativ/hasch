@@ -1,5 +1,5 @@
 (ns hasch.test
-  (:require [hasch.core :refer [edn-hash uuid squuid]]
+  (:require [hasch.core :refer [edn-hash uuid squuid b64-hash]]
             [hasch.benc :refer [xor-hashes]]
             [hasch.platform :refer [uuid5 sha512-message-digest hash->str]]
             [incognito.base :as ic]
@@ -105,6 +105,10 @@
     (is (= (subs (str (squuid (uuid [1 2 3]))) 8)
            "-5c15-555e-a1c8-6166a78fc808"))))
 
+(deftest b64-hash-test
+  (testing "Testing the base64 encoding of a hash."
+    (is (= (b64-hash [1 2 3 {:key 5 :value 10}])
+           "TREJlRrK211AASiqQMFG9RLFW0CPC/arrCxeaUj27Qho2USJU40T01uCdjUg/OMiPGttyL1ELPCrVXXhMIroRQ=="))))
 
 #_(run-tests)
 
@@ -127,3 +131,4 @@
     (def repl-env (reset! cemerick.austin.repls/browser-repl-env
                          (cemerick.austin/repl-env)))
     (cemerick.austin.repls/cljs-repl repl-env))
+
