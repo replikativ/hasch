@@ -1,6 +1,8 @@
 (ns hasch.test
   (:require [hasch.core :refer [edn-hash uuid squuid b64-hash]]
             [hasch.benc :refer [xor-hashes]]
+            [hasch.md5 :as md5]
+            [hasch.hex :as hex]
             [hasch.platform :refer [uuid5 sha512-message-digest hash->str]]
             [incognito.base :as ic]
             #?(:clj [clojure.test :as t :refer (is deftest run-tests testing)]
@@ -109,6 +111,11 @@
   (testing "Testing the base64 encoding of a hash."
     (is (= (b64-hash [1 2 3 {:key 5 :value 10}])
            "TREJlRrK211AASiqQMFG9RLFW0CPC/arrCxeaUj27Qho2USJU40T01uCdjUg/OMiPGttyL1ELPCrVXXhMIroRQ=="))))
+
+
+(deftest test-md5
+  (is (= (hex/encode (md5/str->md5 "geheimnis"))
+         "525e92c6aa11544a2ab794f8921ecb0f")))
 
 #_(run-tests)
 

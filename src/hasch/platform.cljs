@@ -77,6 +77,9 @@ Our hash version is coded in first 2 bits."
 (defn sha512-message-digest []
   (goog.crypt.Sha512.))
 
+(defn md5-message-digest []
+  (goog.crypt.Md5.))
+
 (defn encode [magic a]
   (.concat #js [magic] a))
 
