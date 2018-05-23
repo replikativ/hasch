@@ -81,11 +81,19 @@ Our hash version is coded in first 2 bits."
   (-coerce [this md-create-fn write-handlers]
     (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
+  java.math.BigInteger
+  (-coerce [this md-create-fn write-handlers]
+    (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
+
   java.lang.Float
   (-coerce [this md-create-fn write-handlers]
     (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
   java.lang.Double
+  (-coerce [this md-create-fn write-handlers]
+    (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
+
+  java.math.BigDecimal
   (-coerce [this md-create-fn write-handlers]
     (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 

@@ -179,6 +179,8 @@ nil
 
 
 # Changes
+- 0.3.5 Support BigInteger and BigDecimal hashing (same as for limited precision types).
+- 0.3.4 Expose high-level base64 hashes with full precision.
 - 0.3.2 Minimize dependencies, explicit profiles for different Clojure(Script) versions
 - 0.3.1 fix bug in hashing sequences containing null
 - 0.3.0 fix accidental hashing of records as maps
