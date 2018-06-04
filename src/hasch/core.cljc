@@ -55,5 +55,6 @@
   all bits of the hash compared to 128 bits for the UUID-5. Both should be safe,
   but b64-hash is safer towards collisions."
   [val]
-  (b64/encode (byte-array (edn-hash val))))
+  (b64/encode (#?(:clj byte-array :cljs clj->js) (edn-hash val))))
+
 
