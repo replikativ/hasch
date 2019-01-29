@@ -5,7 +5,7 @@
   #?(:clj (:import [java.security MessageDigest]
                    [java.math BigInteger])))
 
-(defn str->md5 [s]
+(defn str->md5 [^String s]
   #?(:clj
      (let [algorithm (MessageDigest/getInstance "MD5")
            raw       (.digest algorithm (.getBytes s))]
@@ -17,4 +17,3 @@
                     (.update md5-digester bytes)
                     (.digest md5-digester))]
        hashed)))
-

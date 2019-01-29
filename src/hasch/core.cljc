@@ -38,8 +38,8 @@
    #?(:clj
       (let [time (System/currentTimeMillis)
             secs (quot time 1000)
-            lsb (.getLeastSignificantBits uuid)
-            msb (.getMostSignificantBits uuid)
+            lsb (.getLeastSignificantBits ^java.util.UUID uuid)
+            msb (.getMostSignificantBits ^java.util.UUID uuid)
             timed-msb (bit-or (bit-shift-left secs 32)
                               (bit-and 0x00000000ffffffff msb))]
         (java.util.UUID. timed-msb lsb))
@@ -56,5 +56,3 @@
   but b64-hash is safer towards collisions."
   [val]
   (b64/encode (#?(:clj byte-array :cljs clj->js) (edn-hash val))))
-
-
