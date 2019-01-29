@@ -10,6 +10,7 @@
   :source-paths ["src"]
   :plugins [[lein-cljsbuild "1.1.4"]]
 
+  :global-vars {*warn-on-reflection* true}
   :aliases {"all" ["with-profile" "default:+1.7:+1.8"]}
   :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.8"]
                                   [com.cemerick/piggieback "0.2.1"]
