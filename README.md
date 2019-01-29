@@ -208,13 +208,14 @@ You can avoid the mapping step to Clojure datastructures (also effectively alloc
 - If keeping sorted maps/sets is feasable for high-throughput applications, allow to hash them sequentally.
 
 # Contributors
+- Max Penet
 - James Conroy-Finn
 - Konrad Kühne
 - Christian Weilbach
 
 ## License
 
-Copyright © 2014-2016 Christian Weilbach and contributors
+Copyright © 2014-2018 Christian Weilbach and contributors
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
