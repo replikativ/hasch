@@ -5,8 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha14" :scope "provided"]
                  [org.clojure/clojurescript "1.9.293" :scope "provided"]
-                 [io.replikativ/incognito "0.2.2"]
-                 [org.clojure/data.codec "0.1.1"]]
+                 [io.replikativ/incognito "0.2.2"]]
   :source-paths ["src"]
   :plugins [[lein-cljsbuild "1.1.4"]]
 
