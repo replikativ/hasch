@@ -194,7 +194,7 @@ nil
 
 *Warning*: Getting all that right is not trivial. Don't mess with hashing extension if you don't have to, just make your type uniquely mappable with [incognito](https://github.com/replikativ/incognito)!
 
-You can avoid the mapping step to Clojure datastructures (also effectively allocating double memory) by extending the `IHashCoercion` protocol to your types. You should orient on the `IRecord` implementation and must use `(:literal magics)` to avoid collisions with literal values of the same form. Either by using the default serialisation mechanism to retrieve a hash-value or by extending the hash-coercion, your serialisation or coercion must satisfy the *equality relation*:
+You can avoid the mapping step to Clojure datastructures (also effectively allocating double memory) by extending the `hasch.benc/PHashCoercion` protocol to your types. You should orient on the `IRecord` implementation and must use `(:literal magics)` to avoid collisions with literal values of the same form. Either by using the default serialisation mechanism to retrieve a hash-value or by extending the hash-coercion, your serialisation or coercion must satisfy the *equality relation*:
 
 - hashes *must* follow `IEquiv` equality of Clojure(Script): `(= a b) <=> (= (edn-hash a) (edn-hash b))`, `(not= a b) <=> (not= (edn-hash a) (edn-hash b))`: Your serialisation has to be *unique*, hashing has to be injective or in other words you might not introduce collisions. Non-equal objects must have non-equal hashes.
 - *reflexivity*: `(= (edn-hash a) (edn-hash a))`, including on different runtimes
