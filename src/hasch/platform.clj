@@ -97,6 +97,10 @@ Our hash version is coded in first 2 bits."
   (-coerce [this md-create-fn write-handlers]
     (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
 
+  clojure.lang.BigInt
+  (-coerce [this md-create-fn write-handlers]
+    (encode (:number magics) (.getBytes (.toString this) "UTF-8")))
+
   java.util.UUID
   (-coerce [this md-create-fn write-handlers]
     (encode (:uuid magics) (.getBytes (.toString this) "UTF-8")))
