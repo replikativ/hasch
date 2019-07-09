@@ -1,4 +1,4 @@
-(defproject io.replikativ/hasch "0.3.5"
+(defproject io.replikativ/hasch "0.3.6"
   :description "Cryptographic hashing of EDN datastructures."
   :url "http://github.com/replikativ/hasch"
   :license {:name "Eclipse Public License"
