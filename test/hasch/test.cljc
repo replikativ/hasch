@@ -10,6 +10,7 @@
 
 #?(:cljs (def byte-array into-array))
 
+
 (defrecord Bar [name])
 
 (deftest hash-test
@@ -134,6 +135,12 @@
      []
      (enable-console-print!)
      (run-tests)))
+
+#?(:cljs
+  (do
+    (run)
+    (when (exists? js/phantom)
+      (js/phantom.exit))))
 
 ;; fire up repl
 #_(do
