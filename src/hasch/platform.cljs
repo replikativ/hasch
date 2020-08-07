@@ -1,5 +1,6 @@
 (ns hasch.platform
-  (:require [goog.crypt.Sha512]
+  (:require [goog.crypt]
+            [goog.crypt.Sha512]
             [cljs.reader :as reader]
             [clojure.string]
             [incognito.base :as ib]
@@ -25,11 +26,15 @@
 (defn hash->str [bytes]
   (apply str (map byte->hex bytes)))
 
+(def ^:dynamic *use-legacy-utf8-conversion* false)
 
 ;; taken from http://jsperf.com/uint8array-vs-array-encode-to-utf8/2
 ;; which is taken from //http://user1.matsumoto.ne.jp/~goma/js/utf.js
 ;; verified against: "小鳩ちゃんかわいいなぁ"
-(defn utf8
+;; Note that this variant is broken for higher planes of unicode. For
+;; backwards compatibility, you can enable `*use-legacy-utf8-conversion*`
+;; to keep using the old improper conversion method.
+(defn- legacy-utf8
   "Encodes a string as UTF-8 in an unsigned js array."
   [s]
   (into-array
@@ -57,6 +62,12 @@
     (range (.-length s)))))
 
 #_(utf8 "小鳩ちゃんかわいいなぁ")
+
+(defn utf8
+  [s]
+  (if *use-legacy-utf8-conversion*
+    (legacy-utf8 s)
+    (goog.crypt/stringToUtf8ByteArray s)))
 
 (defn uuid5
   "Generates a uuid5 from a sha-1 hash byte sequence.
