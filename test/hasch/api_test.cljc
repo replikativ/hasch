@@ -5,8 +5,7 @@
             [hasch.hex :as hex]
             [hasch.platform :refer [uuid5 sha512-message-digest hash->str #?(:cljs utf8)]]
             [incognito.base :as ic]
-            #?(:clj [clojure.test :as t :refer (is deftest run-tests testing)]
-               :cljs [cljs.test :as t :refer-macros (is deftest run-tests testing)])))
+            [clojure.test :as t :refer [is deftest testing]]))
 
 #?(:cljs (def byte-array into-array))
 
@@ -74,13 +73,14 @@
     (is (= (edn-hash #{1 2 3 4})
            '(42 216 217 238 97 125 210 112 2 83 128 62 82 47 119 14 59 95 246 107 191 138 251 102 201 52 9 132 96 243 199 223 218 81 88 130 165 214 125 48 222 30 64 233 101 122 196 84 11 93 186 26 92 225 203 161 196 98 186 138 174 118 244 248)))
 
-    (is (= (edn-hash (Bar. "hello"))
-           (edn-hash (ic/incognito-reader {'hasch.api-test.Bar map->Bar}
-                                          (ic/incognito-writer {} (Bar. "hello"))))
-           (edn-hash (ic/map->IncognitoTaggedLiteral (ic/incognito-writer {} (Bar. "hello"))))
-           (edn-hash (ic/map->IncognitoTaggedLiteral {:tag 'hasch.api_test.Bar
-                                                        :value {:name "hello"}}))
-           '(236 35 140 74 245 164 93 1 239 144 253 91 193 51 241 129 149 210 99 169 16 130 21 235 236 166 36 205 80 10 215 106 173 39 96 197 241 49 64 219 252 119 65 15 87 24 2 253 0 143 61 187 88 216 238 226 146 40 197 51 82 208 246 127)))
+    #?(:clj
+       (is (= (edn-hash (Bar. "hello"))
+              (edn-hash (ic/incognito-reader {'hasch.api-test.Bar map->Bar}
+                                             (ic/incognito-writer {} (Bar. "hello"))))
+              (edn-hash (ic/map->IncognitoTaggedLiteral (ic/incognito-writer {} (Bar. "hello"))))
+              (edn-hash (ic/map->IncognitoTaggedLiteral {:tag 'hasch.api_test.Bar
+                                                         :value {:name "hello"}}))
+              '(236 35 140 74 245 164 93 1 239 144 253 91 193 51 241 129 149 210 99 169 16 130 21 235 236 166 36 205 80 10 215 106 173 39 96 197 241 49 64 219 252 119 65 15 87 24 2 253 0 143 61 187 88 216 238 226 146 40 197 51 82 208 246 127))))
 
     (is (= (edn-hash #?(:cljs (js/Uint8Array. #js [1 2 3 42 149])
                         :clj (byte-array [1 2 3 42 149])))
@@ -93,7 +93,6 @@
                                  [[0xa0 0x01 0xf3] [0x0c 0xf0 0x5f] [0x0a 0x30 0x07]])))
            (map byte (xor-hashes (map byte-array
                                       [[0x0a 0x30 0x07] [0x0c 0xf0 0x5f] [0xa0 0x01 0xf3]])))))))
-
 
 (deftest code-hashing
   (testing "Code hashing."
@@ -119,28 +118,12 @@
     (is (= (b64-hash [1 2 3 {:key 5 :value 10}])
            "TREJlRrK211AASiqQMFG9RLFW0CPC/arrCxeaUj27Qho2USJU40T01uCdjUg/OMiPGttyL1ELPCrVXXhMIroRQ=="))))
 
-
 (deftest test-md5
   (is (= (hex/encode (md5/str->md5 "geheimnis"))
          "525e92c6aa11544a2ab794f8921ecb0f")))
-
-#_(run-tests)
 
 #?(:cljs
    (deftest utf8-test
      (is (= (js->clj (utf8 "小鳩ちゃんかわいいなぁ"))
             [229 176 143 233 179 169 227 129 161 227 130 131 227 130 147 227
              129 139 227 130 143 227 129 132 227 129 132 227 129 170 227 129 129]))))
-
-#?(:cljs
-   (defn ^:export run
-     []
-     (enable-console-print!)
-     (run-tests)))
-
-;; fire up repl
-#_(do
-    (ns dev)
-    (def repl-env (reset! cemerick.austin.repls/browser-repl-env
-                          (cemerick.austin/repl-env)))
-    (cemerick.austin.repls/cljs-repl repl-env))
