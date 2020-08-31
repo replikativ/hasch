@@ -45,6 +45,12 @@
      :compiler
      {:output-to "resources/test/compiled.js"
       :optimizations :whitespace
+<<<<<<< HEAD
       :pretty-print true}}]
    :test-commands {"unit-tests" ["phantomjs" "resources/test/compiled.js"
                                  "resources/test/unit-test.html"]}})
+=======
+    :pretty-print true}}]
+  :test-commands {"unit-tests" ["phantomjs" "resources/test/compiled.js"
+                                "resources/test/unit-test.html"]}})
+>>>>>>> c7e9f9c42d7741fa09129c36c24618505738b392

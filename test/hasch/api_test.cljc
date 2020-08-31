@@ -9,6 +9,7 @@
 
 #?(:cljs (def byte-array into-array))
 
+
 (defrecord Bar [name])
 
 (deftest hash-test
