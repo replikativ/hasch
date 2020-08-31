@@ -10,7 +10,6 @@
 
 #?(:cljs (def byte-array into-array))
 
-
 (defrecord Bar [name])
 
 (deftest hash-test
@@ -95,7 +94,6 @@
            (map byte (xor-hashes (map byte-array
                                       [[0x0a 0x30 0x07] [0x0c 0xf0 0x5f] [0xa0 0x01 0xf3]])))))))
 
-
 (deftest code-hashing
   (testing "Code hashing."
     (is (= (-> '(fn fib [n]
@@ -120,7 +118,6 @@
     (is (= (b64-hash [1 2 3 {:key 5 :value 10}])
            "TREJlRrK211AASiqQMFG9RLFW0CPC/arrCxeaUj27Qho2USJU40T01uCdjUg/OMiPGttyL1ELPCrVXXhMIroRQ=="))))
 
-
 (deftest test-md5
   (is (= (hex/encode (md5/str->md5 "geheimnis"))
          "525e92c6aa11544a2ab794f8921ecb0f")))
@@ -140,15 +137,15 @@
      (run-tests)))
 
 #?(:cljs
-  (do
-    (run)
-    (when (exists? js/phantom)
-      (js/phantom.exit))))
+   (do
+     (run)
+     (when (exists? js/phantom)
+       (js/phantom.exit))))
 
 ;; fire up repl
 #_(do
     (ns dev)
     (def repl-env (reset! cemerick.austin.repls/browser-repl-env
-                         (cemerick.austin/repl-env)))
+                          (cemerick.austin/repl-env)))
     (cemerick.austin.repls/cljs-repl repl-env))
 

@@ -29,7 +29,6 @@
   ([] (uuid4))
   ([val & {:keys [write-handlers]}] (-> val (edn-hash write-handlers) uuid5)))
 
-
 (defn squuid
   "Calculates a sequential UUID as described in
   https://github.com/clojure-cookbook/clojure-cookbook/blob/master/01_primitive-data/1-24_uuids.asciidoc"
@@ -48,7 +47,6 @@
             secs (quot time 1000)
             prefix (.toString secs 16)]
         (cljs.core/uuid (str prefix (subs (str uuid) 8)))))))
-
 
 (defn b64-hash
   "Provides a base64 encoded string of the edn-hash of a value val. This contains
