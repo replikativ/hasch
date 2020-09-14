@@ -1,0 +1,12 @@
+{
+  "name": "CITests",
+  "version": "1.0.0",
+  "description": "Testing",
+  "devDependencies": {
+    "karma": "^2.0.5",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-cljs-test": "^0.1.0"
+  },
+  "author": "",
+  "license": "MIT"
+}
