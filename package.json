@@ -8,5 +8,8 @@
     "karma-cljs-test": "^0.1.0"
   },
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "shadow-cljs": "^2.11.4"
+  }
 }
