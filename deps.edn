@@ -1,7 +1,7 @@
 {:paths ["src"]
  :deps {org.clojure/clojure        {:mvn/version "1.10.1"}
         org.clojure/clojurescript  {:mvn/version "1.10.764"}
-        io.replikativ/incognito    {:mvn/version "0.2.5"}}
+        io.replikativ/incognito    {:mvn/version "0.2.6"}}
  :aliases {:cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.10.21"}
                                binaryage/devtools   {:mvn/version "1.0.2"}}
                   :extra-paths ["test"]}
