@@ -18,5 +18,6 @@
    :output-to "out/node-tests.js"
    :autorun true}
   
-  :ci {:target :karma
-       :output-to "target/ci.js"}}}
+  :ci
+  {:target :karma
+   :output-to "target/ci.js"}}}

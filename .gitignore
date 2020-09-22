@@ -2,7 +2,6 @@
 /classes
 /checkouts
 /resources/public/js
-pom.xml
 pom.xml.asc
 *.jar
 *.class
@@ -16,3 +15,4 @@ pom.xml.asc
 /.cpcache
 node_modules
 /public
+.cljs_node_repl/
