@@ -1,0 +1,15 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure        {:mvn/version "1.10.1"}
+        org.clojure/clojurescript  {:mvn/version "1.10.764"}
+        io.replikativ/incognito    {:mvn/version "0.2.6"}}
+ :aliases {:cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.10.21"}
+                               binaryage/devtools   {:mvn/version "1.0.2"}}
+                  :extra-paths ["test"]}
+           :dev  {:extra-deps {criterium                {:mvn/version "0.4.6"}}}
+           :test {:extra-deps {lambdaisland/kaocha      {:mvn/version "1.0.641"}}
+                  :extra-paths ["test"]}
+           ;; pull in specific versions of clojure and clojurescript
+           :1.7 {:override-deps {org.clojure/clojure         {:mvn/version "1.7.0"}
+                                 org.clojure/clojurescript   {:mvn/version "1.7.228"}}}
+           :1.8 {:override-deps {org.clojure/clojure         {:mvn/version "1.8.0"}
+                                 org.clojure/clojurescript   {:mvn/version "1.8.51"}}}}}

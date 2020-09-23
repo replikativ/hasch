@@ -10,6 +10,8 @@
 
 
 ;; changes break hashes!
+
+
 (def magics {:nil (byte 0)
              :boolean (byte 1)
              :number (byte 2)
@@ -38,7 +40,7 @@
       (doseq [^bytes bs bytes-or-seq-of-bytes]
         (.update md bs))
       (.update md  ^bytes bytes-or-seq-of-bytes))
-     (.digest md)))
+    (.digest md)))
 
 (defn ^bytes coerce-seq [seq md-create-fn write-handlers]
   (let [^MessageDigest seq-md (md-create-fn)]
@@ -54,7 +56,7 @@
   to avoid collisions in XOR. Takes at maximum 32 bytes into account."
   [seq]
   (let [len (min (count  ^bytes (first seq)) max-entropy-byte-count)]
-    (reduce (fn [ ^bytes acc  ^bytes elem]
+    (reduce (fn [^bytes acc  ^bytes elem]
               (loop [i 0]
                 (when (< i len)
                   (aset acc i (byte (bit-xor (aget acc i) (aget elem i))))
@@ -75,8 +77,8 @@
               (aset ea i (byte 1))))
           (recur (inc i))))
       #?(:clj (let [out (ByteArrayOutputStream.)]
-               (.write out a)
-               (.write out ea)
-               (.toByteArray out))
+                (.write out a)
+                (.write out ea)
+                (.toByteArray out))
          :cljs (.concat a ea)))
     (digest a md-create-fn)))

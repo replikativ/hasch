@@ -11,3 +11,8 @@ pom.xml.asc
 /.repl*
 /out*
 /.cljsbuild*
+/.shadow-cljs 
+/.calva 
+/.cpcache
+node_modules
+/public

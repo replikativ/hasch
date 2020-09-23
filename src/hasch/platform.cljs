@@ -1,5 +1,6 @@
 (ns hasch.platform
-  (:require [goog.crypt.Sha512]
+  (:require [goog.crypt]
+            [goog.crypt.Sha512]
             [cljs.reader :as reader]
             [clojure.string]
             [incognito.base :as ib]
@@ -9,7 +10,7 @@
 #_(do
     (ns dev)
     (def repl-env (reset! cemerick.austin.repls/browser-repl-env
-                         (cemerick.austin/repl-env)))
+                          (cemerick.austin/repl-env)))
     (cemerick.austin.repls/cljs-repl repl-env))
 
 (def uuid4 random-uuid)
@@ -21,15 +22,18 @@
       (.toString 16)
       (.substring 1)))
 
-
 (defn hash->str [bytes]
   (apply str (map byte->hex bytes)))
 
+(def ^:dynamic *use-legacy-utf8-conversion* false)
 
 ;; taken from http://jsperf.com/uint8array-vs-array-encode-to-utf8/2
 ;; which is taken from //http://user1.matsumoto.ne.jp/~goma/js/utf.js
 ;; verified against: "小鳩ちゃんかわいいなぁ"
-(defn utf8
+;; Note that this variant is broken for higher planes of unicode. For
+;; backwards compatibility, you can enable `*use-legacy-utf8-conversion*`
+;; to keep using the old improper conversion method.
+(defn- legacy-utf8
   "Encodes a string as UTF-8 in an unsigned js array."
   [s]
   (into-array
@@ -58,6 +62,12 @@
 
 #_(utf8 "小鳩ちゃんかわいいなぁ")
 
+(defn utf8
+  [s]
+  (if *use-legacy-utf8-conversion*
+    (legacy-utf8 s)
+    (goog.crypt/stringToUtf8ByteArray s)))
+
 (defn uuid5
   "Generates a uuid5 from a sha-1 hash byte sequence.
 Our hash version is coded in first 2 bits."
@@ -68,10 +78,10 @@ Our hash version is coded in first 2 bits."
          (bit-clear (bit-set lb1 7) 6) lb2 lb3 lb4 lb5 lb6 lb7 lb8]
         hash->str
         ((fn [s] (str (apply str (take 8 s))
-                     "-" (apply str (take 4 (drop 8 s)))
-                     "-" (apply str (take 4 (drop 12 s)))
-                     "-" (apply str (take 4 (drop 16 s)))
-                     "-" (apply str (drop 20 s)))))
+                      "-" (apply str (take 4 (drop 8 s)))
+                      "-" (apply str (take 4 (drop 12 s)))
+                      "-" (apply str (take 4 (drop 16 s)))
+                      "-" (apply str (drop 20 s)))))
         uuid)))
 
 (defn sha512-message-digest []
@@ -154,8 +164,6 @@ Our hash version is coded in first 2 bits."
                           {:type (type this)
                            :value this})))))
 
-
-
 (comment
   (js/Array.prototype.slice.call (js/Uint8Array. #js [1 2 3]))
   (.log js/console (-coerce (js/Uint8Array. #js [1 2 3]) (sha512-message-digest) sha512-message-digest))
@@ -184,6 +192,5 @@ Our hash version is coded in first 2 bits."
                                                :person/postal 38237
                                                :person/telefon "02343248474"
                                                :person/weeight 0.3823}))))
-
 
   (.log js/console "benchmarking: " (time (-coerce datom-vector sha512-message-digest))))
