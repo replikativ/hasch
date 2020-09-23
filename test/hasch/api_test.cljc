@@ -9,7 +9,6 @@
 
 #?(:cljs (def byte-array into-array))
 
-
 (defrecord Bar [name])
 
 (deftest hash-test
@@ -73,7 +72,6 @@
 
     (is (= (edn-hash #{1 2 3 4})
            '(42 216 217 238 97 125 210 112 2 83 128 62 82 47 119 14 59 95 246 107 191 138 251 102 201 52 9 132 96 243 199 223 218 81 88 130 165 214 125 48 222 30 64 233 101 122 196 84 11 93 186 26 92 225 203 161 196 98 186 138 174 118 244 248)))
-
 
     (is (= (edn-hash (Bar. "hello"))
            (edn-hash (ic/incognito-reader {'hasch.api-test.Bar map->Bar}

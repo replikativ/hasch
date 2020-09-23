@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o pipefail
+
+# Compile for browser
+npx shadow-cljs compile ci
+npx karma start --single-run
+
+# Compile for node
+npx shadow-cljs compile node-test
