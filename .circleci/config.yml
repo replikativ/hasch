@@ -13,13 +13,18 @@ workflows:
       - tools/unittest:
           requires:
             - tools/setup
+      - tools/cljstest:
+          requires:
+            - tools/setup
       - tools/integrationtest-postgresql:
           requires:
             - tools/setup
       - tools/build:
+          jarname: "hasch"
           requires:
             - tools/setup
       - tools/deploy-snapshot:
+          jarname: "hasch"
           context: clojars-deploy
           filters:
             branches:
@@ -28,9 +33,11 @@ workflows:
             - tools/setup
             - tools/format
             - tools/unittest
+            - tools/cljstest
             - tools/integrationtest-postgresql
             - tools/build
       - tools/deploy-release:
+          jarname: "hasch"
           context: clojars-deploy
           filters:
             branches:
@@ -39,5 +46,6 @@ workflows:
             - tools/setup
             - tools/format
             - tools/unittest
+            - tools/cljstest
             - tools/integrationtest-postgresql
             - tools/build
