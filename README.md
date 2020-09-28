@@ -1,4 +1,4 @@
-# hasch [![CircleCI](https://circleci.com/gh/replikativ/hasch.svg?style=shield&circle-token=8a654d85a02df68beb15a44d3505ff1e83ddc036)](https://circleci.com/gh/replikativ/hasch)
+# hasch 
 
 <p align="center">
 <a href="https://clojurians.slack.com/archives/CB7GJAN0L"><img src="https://img.shields.io/badge/clojurians%20slack-join%20channel-blueviolet"/></a>
