@@ -31,8 +31,9 @@ workflows:
             - tools/setup
       - tools/deploy-snapshot:
           jarname: "hasch"
-          context: clojars-deploy
-          context: dockerhub-deploy
+          context: 
+            - clojars-deploy
+            - dockerhub-deploy
           filters:
             branches:
               only: development
@@ -45,8 +46,9 @@ workflows:
             - tools/build
       - tools/deploy-release:
           jarname: "hasch"
-          context: clojars-deploy
-          context: dockerhub-deploy
+          context: 
+            - clojars-deploy
+            - dockerhub-deploy
           filters:
             branches:
               only: master
