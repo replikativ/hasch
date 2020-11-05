@@ -6,26 +6,34 @@ orbs:
 workflows:
   build-test-and-deploy:
     jobs:
-      - tools/setup
+      - tools/setup:
+          context: dockerhub-deploy
       - tools/format:
+          context: dockerhub-deploy
           requires:
             - tools/setup
       - tools/unittest:
+          context: dockerhub-deploy
           requires:
             - tools/setup
       - tools/cljstest:
+          context: dockerhub-deploy
           requires:
             - tools/setup
       - tools/integrationtest-postgresql:
+          context: dockerhub-deploy
           requires:
             - tools/setup
       - tools/build:
+          context: dockerhub-deploy          
           jarname: "hasch"
           requires:
             - tools/setup
       - tools/deploy-snapshot:
           jarname: "hasch"
-          context: clojars-deploy
+          context: 
+            - clojars-deploy
+            - dockerhub-deploy
           filters:
             branches:
               only: development
@@ -38,7 +46,9 @@ workflows:
             - tools/build
       - tools/deploy-release:
           jarname: "hasch"
-          context: clojars-deploy
+          context: 
+            - clojars-deploy
+            - dockerhub-deploy
           filters:
             branches:
               only: master
