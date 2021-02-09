@@ -7,8 +7,8 @@
   "Returns a base64 encoded String."
   [byte-arr]
   #?(:clj (String. (.encode (Base64/getEncoder)
-                    ^bytes byte-arr)
-           "UTF-8")
+                            ^bytes byte-arr)
+                   "UTF-8")
      :cljs (goog.crypt.base64.encodeByteArray byte-arr)))
 
 (defn decode

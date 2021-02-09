@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o pipefail
+
+trap teardown EXIT
+
+function setup_PG() {
+    if [ -z ${CIRCLECI} ]; then
+        echo $(docker run --detach --publish 5432:5432 --env POSTGRES_DB=config-test --env POSTGRES_USER=alice --env POSTGRES_PASSWORD=foo postgres:12-alpine)
+    fi
+}
+
+function teardown() {
+    if [ -z ${CIRCLECI} ]; then
+        docker rm -f ${PG_NAME}
+    fi
+}
+
+PG_NAME=$(setup_PG)
+
+sleep 5
+
+TIMBRE_LEVEL=':warn' clojure -A:test -m kaocha.runner --focus :integration
