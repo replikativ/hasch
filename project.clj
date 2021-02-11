@@ -26,6 +26,7 @@
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]
                                   [org.clojure/clojurescript "1.8.51"]]}}
 
+  :jar-exclusions [#"private" #"public"]
   :jvm-opts ^:replace []
 
   :cljsbuild
