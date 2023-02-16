@@ -7,6 +7,8 @@
                   :extra-paths ["test"]}
            :dev  {:extra-deps {criterium/criterium      {:mvn/version "0.4.6"}}}
            :test {:extra-deps {lambdaisland/kaocha      {:mvn/version "1.77.1236"}
+                               io.github.cognitect-labs/test-runner {:git/tag "v0.5.1"
+                                                                     :git/sha "dfb30dd"}
                                io.replikativ/datahike   {:mvn/version "0.6.1531"}
                                io.replikativ/hasch      {:local/root "."}}
                   :extra-paths ["test"]}
@@ -15,7 +17,15 @@
                                  org.clojure/clojurescript   {:mvn/version "1.7.228"}}}
            :1.8 {:override-deps {org.clojure/clojure         {:mvn/version "1.8.0"}
                                  org.clojure/clojurescript   {:mvn/version "1.8.51"}}}
-           :uberjar {:extra-deps {seancorfield/depstar {:mvn/version "2.0.216"}}
-                     :main-opts ["-m" "hf.depstar.jar" "replikativ-hasch.jar"]}
-           :deploy {:extra-deps {deps-deploy/deps-deploy {:mvn/version "0.0.12"}}
-                    :main-opts ["-m" "deps-deploy.deps-deploy" "deploy" "replikativ-hasch.jar"]}}}
+           :build  {:deps       {io.github.seancorfield/build-clj {:git/tag "v0.6.7"
+                                                                   :git/sha "22c2d09"}
+                                 borkdude/gh-release-artifact     {:git/url "https://github.com/borkdude/gh-release-artifact"
+                                                                   :git/sha     "a83ee8da47d56a80b6380cbb6b4b9274048067bd"}
+                                 babashka/babashka.curl           {:mvn/version "0.1.1"}
+                                 babashka/fs                      {:mvn/version "0.1.2"}
+                                 cheshire/cheshire                {:mvn/version "5.10.2"}}
+                    :ns-default build}
+           :ffix   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.0"}}
+                    :main-opts  ["-m" "cljfmt.main" "fix"]}
+           :format {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.0"}}
+                    :main-opts  ["-m" "cljfmt.main" "check"]}}}
