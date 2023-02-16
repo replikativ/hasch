@@ -5,7 +5,8 @@
     [deps-deploy.deps-deploy :as dd])
   (:import (clojure.lang ExceptionInfo)))
 
-(def lib 'timokramer/hasch)
+(def org "replikativ")
+(def lib 'io.replikativ/hasch)
 (def version (format "0.3.%s" (b/git-count-revs nil)))
 (def current-commit (gh/current-commit))
 (def class-dir "target/classes")
@@ -50,7 +51,7 @@
         result))))
 
 (defn try-release []
-  (try (gh/overwrite-asset {:org "replikativ"
+  (try (gh/overwrite-asset {:org org
                             :repo (name lib)
                             :tag version
                             :commit current-commit
