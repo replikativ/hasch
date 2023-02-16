@@ -21,15 +21,15 @@ workflows:
       - tools/unittest:
           context: clojars-deploy
           requires:
-            - build
+            - tools/build
       - tools/cljstest:
           context: clojars-deploy
           requires:
-            - build
+            - tools/build
       - tools/integrationtest:
           context: clojars-deploy
           requires:
-            - build
+            - tools/build
       - tools/deploy:
           context: clojars-deploy
           filters:
