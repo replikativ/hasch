@@ -10,7 +10,6 @@
            java.nio.ByteBuffer
            java.security.MessageDigest))
 
-
 (set! *warn-on-reflection* true)
 
 (defn uuid4
@@ -146,7 +145,6 @@ Our hash version is coded in first 2 bits."
         (encode (:literal magics) (coerce-seq [tag value] md-create-fn write-handlers)))
       (encode (:map magics) (xor-hashes (map #(-coerce % md-create-fn write-handlers) (seq this))))))
 
-
   clojure.lang.IPersistentSet
   (-coerce [this md-create-fn write-handlers]
     (encode (:set magics) (xor-hashes (map #(digest (-coerce % md-create-fn write-handlers)
@@ -174,14 +172,10 @@ Our hash version is coded in first 2 bits."
                             (.update md ba 0 size)
                             (recur (.read fis ba))))))))))))
 
-
 (extend (Class/forName "[B")
   PHashCoercion
   {:-coerce (fn [^bytes this md-create-fn write-handlers]
               (encode (:binary magics) (encode-safe this md-create-fn)))})
-
-
-
 
 (comment
   (require '[clojure.java.io :as io])
@@ -198,7 +192,6 @@ Our hash version is coded in first 2 bits."
   (clojure.reflect/reflect foo)
   (= (map byte (-coerce (io/file "/tmp/bar") sha512-message-digest))
      (map byte (-coerce (slurp-bytes "/tmp/bar") sha512-message-digest)))
-
 
   (map byte (-coerce {:hello :world :foo :bar 1 2} sha512-message-digest))
 
@@ -224,26 +217,21 @@ Our hash version is coded in first 2 bits."
 
   (take 10 (time (into (sorted-set) (range 1e6)))) ;; 1.7 s
 
-
   (bench (coerce-seq sha512-message-digest (seq (into (sorted-set) (range 1e4)))))
 
   (bench (-coerce (into #{} (range 1e4)) sha512-message-digest))
-
 
   (bench (-coerce (seq (into (sorted-set) (range 10))) sha512-message-digest)) ;; 8.6 us
 
   (bench (-coerce (into #{} (range 10)) sha512-message-digest)) ;; 31.7 us
 
-
   (bench (-coerce (seq (into (sorted-set) (range 100))) sha512-message-digest))
 
   (bench (-coerce (into #{} (range 100)) sha512-message-digest))
 
-
   (bench (-coerce (seq (into (sorted-set) (range 1e4))) sha512-message-digest))
 
   (bench (-coerce (into #{} (range 1e4)) sha512-message-digest))
-
 
   (def small-map (into {} (map vec (partition 2 (take 10 (repeatedly rand))))))
   (bench (-coerce (apply concat (seq (into (sorted-map) small-map)))
@@ -251,29 +239,23 @@ Our hash version is coded in first 2 bits."
 
   (bench (-coerce small-map sha512-message-digest)) ;; 20.7 us
 
-
   (def medium-map (into {} (map vec (partition 2 (take 2e6 (repeatedly rand))))))
   (bench (-coerce (apply concat (seq (into (sorted-map) medium-map)))
                   sha512-message-digest))
 
   (bench (-coerce medium-map sha512-message-digest))
 
-
-
   (def million-set (doall (into #{} (range 1000000))))
 
   (bench (-coerce million-set sha512-message-digest)) ;; 2.69 secs
-
 
   (def million-seq3 (doall (repeat 1000000 "hello world")))
 
   (bench (-coerce million-seq3 sha512-message-digest)) ;; 916 msecs
 
-
   (def million-seq4 (doall (repeat 1000000 :foo/bar)))
 
   (bench (-coerce million-seq4 sha512-message-digest)) ;; 752 msecs
-
 
   (def datom-vector (doall (vec (repeat 10000 {:db/id 18239
                                                :person/name "Frederic"
@@ -303,11 +285,9 @@ Our hash version is coded in first 2 bits."
 
   (bench (-coerce barr sha512-message-digest)) ;; 1.99 secs
 
-
   (def arr (into-array Byte/TYPE (take (* 1024) (repeatedly #(- (rand-int 256) 128)))))
 
-
-  ;; hasch 0.2.3
+;; hasch 0.2.3
   (use 'criterium.core)
 
   (def million-map (into {} (doall (map vec (partition 2
@@ -320,7 +300,6 @@ Our hash version is coded in first 2 bits."
 
   (bench (uuid million-seq3)) ;; 16 secs
 
-
   (def datom-vector (doall (vec (repeat 10000 {:db/id 18239
                                                :person/name "Frederic"
                                                :person/familyname "Johanson"
@@ -330,6 +309,4 @@ Our hash version is coded in first 2 bits."
                                                :person/weeight 0.3823}))))
 
   (bench (uuid datom-vector)) ;; 2.6 secs
-
-
   )

@@ -7,31 +7,33 @@ workflows:
   build-test-and-deploy:
     jobs:
       - tools/setup:
-          context: clojars-deploy
+          context: dockerhub-deploy
           setup_cljs: true
       - tools/build:
-          context: clojars-deploy
+          context: dockerhub-deploy
           build_cljs: true
           requires:
             - tools/setup
       - tools/format:
-          context: clojars-deploy
+          context: dockerhub-deploy
           requires:
             - tools/setup
       - tools/unittest:
-          context: clojars-deploy
+          context: dockerhub-deploy
           requires:
             - tools/build
       - tools/cljstest:
-          context: clojars-deploy
+          context: dockerhub-deploy
           requires:
             - tools/build
       - tools/integrationtest:
-          context: clojars-deploy
+          context: dockerhub-deploy
           requires:
             - tools/build
       - tools/deploy:
-          context: clojars-deploy
+          context:
+            - clojars-deploy
+            - dockerhub-deploy
           filters:
             branches:
               only: main
@@ -42,6 +44,7 @@ workflows:
       - tools/release:
           context:
             - github-token
+            - dockerhub-deploy
           filters:
             branches:
               only: main
