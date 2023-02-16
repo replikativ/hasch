@@ -1,190 +1,49 @@
 version: 2.1
 
-executors:
-  clojurecli:
-    docker:
-      - image: circleci/clojure:openjdk-8-tools-deps-node-browsers
-    working_directory: /home/circleci/replikativ
-  clojurecli-postgresql:
-    docker:
-      - image: circleci/clojure:openjdk-8-tools-deps-node-browsers
-      - image: circleci/postgres:11-alpine
-        environment:
-          POSTGRES_USER: alice
-          POSTGRES_PASSWORD: foo
-          POSTGRES_DB: config-test
-    working_directory: /home/circleci/replikativ
-
-jobs:
-  setup:
-    executor: clojurecli
-    steps:
-      - restore_cache:
-          keys:
-            - source-{{ .Branch }}-{{ .Revision }}
-            - source-{{ .Branch }}
-            - source-
-      - checkout
-      - save_cache:
-          key: source-{{ .Branch }}-{{ .Revision }}
-          paths:
-            - .git
-      - restore_cache:
-          keys:
-            - deps-{{ checksum "deps.edn" }}
-            - deps-
-      - run: clojure -e nil
-      - save_cache:
-          key: deps-{{ checksum "deps.edn" }}
-          paths:
-            - /home/circleci/.m2
-      - restore_cache:
-          keys:
-            - npm-{{ checksum "package.json" }}
-            - npm-
-      - run: npm ci
-      - save_cache:
-          key: npm-{{ checksum "package.json" }}
-          paths:
-            - /home/circleci/.npm
-      - persist_to_workspace:
-          root: /home/circleci/
-          paths:
-            - .m2
-            - .npm
-            - replikativ
-
-  format:
-    executor: clojurecli
-    steps:
-      - attach_workspace:
-          at: /home/circleci
-      - run:
-          name: Format
-          command: clojure -Sdeps '{:deps {cljfmt/cljfmt {:mvn/version "0.6.4"}}}' -m cljfmt.main check
-          no_output_timeout: 5m
-
-
-  unittest:
-    executor: clojurecli
-    steps:
-      - attach_workspace:
-          at: /home/circleci
-      - run:
-          name: Run Unittests
-          command: ./bin/run-unittests
-          no_output_timeout: 5m
-
-  browsertest:
-    executor: clojurecli
-    steps:
-      - attach_workspace:
-          at: /home/circleci
-      - run:
-          name: Run CLJS tests
-          command: ./bin/run-cljstests
-          no_output_timeout: 5m
-
-  integrationtest:
-    executor: clojurecli-postgresql
-    steps: 
-      - attach_workspace:
-          at: /home/circleci
-      - run:
-          name: Run Integrationtests
-          command: ./bin/run-integrationtests
-          no_output_timeout: 5m
-
-  build:
-    executor: clojurecli
-    steps:
-      - attach_workspace:
-          at: /home/circleci
-      - run:
-          name: Build
-          command: clojure -A:uberjar
-          no_output_timeout: 5m
-      - persist_to_workspace:
-          root: /home/circleci/
-          paths: 
-            - replikativ/replikativ-hasch.jar
-
-  deploy-snapshot:
-    executor: clojurecli
-    steps:
-      - attach_workspace:
-          at: /home/circleci
-      - run:
-          name: Install xmllint
-          command: sudo apt-get install libxml2-utils
-      - run:
-          name: Deploy Snapshot to Clojars
-          command: |
-            VERSION=$(xmllint --xpath '/*[local-name()="project"]/*[local-name()="version"]/text()' pom.xml)
-            if [[ ${VERSION} =~ .*-SNAPSHOT ]]; then
-                clojure -A:deploy
-            else
-                exit 0
-            fi
-
-  deploy-release:
-    executor: clojurecli
-    steps:
-      - attach_workspace:
-          at: /home/circleci
-      - run:
-          name: Install xmllint
-          command: sudo apt-get install libxml2-utils
-      - run:
-          name: Deploy Release to Clojars
-          command: |
-            VERSION=$(xmllint --xpath '/*[local-name()="project"]/*[local-name()="version"]/text()' pom.xml)
-            if [[ ${VERSION} =~ .*-SNAPSHOT ]]; then
-                exit 0
-            else
-                clojure -A:deploy
-            fi
+orbs:
+  tools: replikativ/clj-tools@0
 
 workflows:
-  build_test_and_deploy:
+  build-test-and-deploy:
     jobs:
-      - setup
-      - format:
+      - tools/setup:
+          context: clojars-deploy
+          setup_cljs: true
+      - tools/build:
+          context: clojars-deploy
+          build_cljs: true
           requires:
-            - setup
-      - unittest:
+            - tools/setup
+      - tools/format:
+          context: clojars-deploy
           requires:
-            - setup
-      - integrationtest:
+            - tools/setup
+      - tools/unittest:
+          context: clojars-deploy
           requires:
-            - setup
-      - browsertest:
+            - build
+      - tools/cljstest:
+          context: clojars-deploy
           requires:
-            - setup
-      - build:
+            - build
+      - tools/integrationtest:
+          context: clojars-deploy
           requires:
-            - setup
-      - deploy-snapshot:
+            - build
+      - tools/deploy:
           context: clojars-deploy
           filters:
             branches:
-              only: development
+              only: main
           requires:
-            - setup
-            - format
-            - unittest
-            - integrationtest
-            - browsertest
-            - build
-      - deploy-release:
-          context: clojars-deploy
+            - tools/format
+            - tools/unittest
+            - tools/cljstest
+      - tools/release:
+          context:
+            - github-token
           filters:
             branches:
-              only: master
+              only: main
           requires:
-            - setup
-            - format
-            - unittest
-            - integrationtest
-            - browsertest
-            - build
+            - tools/deploy
