@@ -18,11 +18,13 @@
                                  org.clojure/clojurescript {:mvn/version "1.7.228"}}}
            :1.8 {:override-deps {org.clojure/clojure       {:mvn/version "1.8.0"}
                                  org.clojure/clojurescript {:mvn/version "1.8.51"}}}
-           :build  {:deps       {borkdude/gh-release-artifact     {:git/url "https://github.com/borkdude/gh-release-artifact"
-                                                                   :git/sha     "a83ee8da47d56a80b6380cbb6b4b9274048067bd"}
-                                 babashka/babashka.curl           {:mvn/version "0.1.1"}
-                                 babashka/fs                      {:mvn/version "0.1.2"}
-                                 cheshire/cheshire                {:mvn/version "5.10.2"}}
+           :build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.9.3"}
+                                 slipset/deps-deploy           {:mvn/version "0.2.0"}
+                                 borkdude/gh-release-artifact  {:git/url "https://github.com/borkdude/gh-release-artifact"
+                                                                :git/sha     "a83ee8da47d56a80b6380cbb6b4b9274048067bd"}
+                                 babashka/babashka.curl        {:mvn/version "0.1.1"}
+                                 babashka/fs                   {:mvn/version "0.1.2"}
+                                 cheshire/cheshire             {:mvn/version "5.10.2"}}
                     :ns-default build}
            :ffix   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.0"}}
                     :main-opts  ["-m" "cljfmt.main" "fix"]}
