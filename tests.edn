@@ -1,5 +1,2 @@
-#kaocha/v1 {:tests [{:id :clj
-                     :skip-meta [:integration]}
-                    {:id :integration
-                     :test-paths ["test"]
+#kaocha/v1 {:tests [{:id :integration
                      :focus-meta [:integration]}]}

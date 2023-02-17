@@ -1,7 +1,6 @@
 (ns hasch.datahike-test
-  (:require
-   [clojure.test :refer :all]
-   [datahike.integration-test :as dt]))
+  (:require [clojure.test :refer :all]
+            [datahike.integration-test :as dt]))
 
 (def config {:store {:backend :mem
                      :id "hasch-datahike-test-db"}
@@ -9,11 +8,10 @@
              :schema-flexibility :read})
 
 (defn test-fixture [f]
-  (dt/integration-test-fixture config))
+  (dt/integration-test-fixture config)
+  (f))
 
 (use-fixtures :once test-fixture)
 
-(deftest datahike-integration-test
-  (is (= :foo :bar))
+(deftest ^:integration datahike-integration-test
   (dt/integration-test config))
-
