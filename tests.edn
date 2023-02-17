@@ -1,4 +1,5 @@
 #kaocha/v1 {:tests [{:id :clj
-                     :kaocha.filter/skip-meta [:integration]}
+                     :skip-meta [:integration]}
                     {:id :integration
-                     :kaocha.filter/focus-meta [:integration]}]}
+                     :test-paths ["test"]
+                     :focus-meta [:integration]}]}
