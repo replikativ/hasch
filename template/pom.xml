@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <packaging>jar</packaging>
+  <groupId>timokramer</groupId>
+  <artifactId>hasch</artifactId>
+  <name>hasch</name>
+  <description>A library to consistently crypto-hash edn data structures on Clojure and ClojureScript with SHA-512</description>
+  <licenses>
+    <license>
+        <name>Eclipse</name>
+        <url>http://www.eclipse.org/legal/epl-v10.html</url>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:git@github.com:replikativ/hasch.git</connection>
+    <developerConnection>scm:git:git@github.com/replikativ/hasch.git</developerConnection>
+    <url>https://github.com/replikativ/hasch</url>
+  </scm>
+</project>

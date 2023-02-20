@@ -1,0 +1,32 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure        {:mvn/version "1.11.1"}
+        org.clojure/clojurescript  {:mvn/version "1.11.60"}
+        io.replikativ/incognito    {:mvn/version "0.3.66"}}
+ :aliases {:cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.20.20"}
+                               binaryage/devtools   {:mvn/version "1.0.6"}}
+                  :extra-paths ["test"]}
+           :dev  {:extra-deps {criterium/criterium                  {:mvn/version "0.4.6"}}}
+           :test {:extra-deps {lambdaisland/kaocha                  {:mvn/version "1.77.1236"}
+                               io.github.cognitect-labs/test-runner {:git/tag "v0.5.1"
+                                                                     :git/sha "dfb30dd"}
+                               io.replikativ/datahike               {:mvn/version "0.6.1531"}
+                               io.replikativ/hasch                  {:local/root "."}}
+                  :main-opts ["-m" "kaocha.runner"]
+                  :extra-paths ["test"]}
+           ;; pull in specific versions of clojure and clojurescript
+           :1.7 {:override-deps {org.clojure/clojure       {:mvn/version "1.7.0"}
+                                 org.clojure/clojurescript {:mvn/version "1.7.228"}}}
+           :1.8 {:override-deps {org.clojure/clojure       {:mvn/version "1.8.0"}
+                                 org.clojure/clojurescript {:mvn/version "1.8.51"}}}
+           :build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.9.3"}
+                                 slipset/deps-deploy           {:mvn/version "0.2.0"}
+                                 borkdude/gh-release-artifact  {:git/url "https://github.com/borkdude/gh-release-artifact"
+                                                                :git/sha     "a83ee8da47d56a80b6380cbb6b4b9274048067bd"}
+                                 babashka/babashka.curl        {:mvn/version "0.1.1"}
+                                 babashka/fs                   {:mvn/version "0.1.2"}
+                                 cheshire/cheshire             {:mvn/version "5.10.2"}}
+                    :ns-default build}
+           :ffix   {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.0"}}
+                    :main-opts  ["-m" "cljfmt.main" "fix"]}
+           :format {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.0"}}
+                    :main-opts  ["-m" "cljfmt.main" "check"]}}}

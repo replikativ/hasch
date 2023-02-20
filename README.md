@@ -1,5 +1,14 @@
 # hasch [![CircleCI](https://circleci.com/gh/replikativ/hasch.svg?style=shield&circle-token=8a654d85a02df68beb15a44d3505ff1e83ddc036)](https://circleci.com/gh/replikativ/hasch)
 
+
+<p align="center">
+<a href="https://clojurians.slack.com/archives/CB7GJAN0L"><img src="https://img.shields.io/badge/clojurians%20slack-join%20channel-blueviolet"/></a>
+<a href="https://clojars.org/io.replikativ/hasch"> <img src="https://img.shields.io/clojars/v/io.replikativ/hasch.svg" /></a>
+<a href="https://circleci.com/gh/replikativ/hasch"><img src="https://circleci.com/gh/replikativ/hasch.svg?style=shield"/></a>
+<a href="https://github.com/replikativ/hasch/tree"><img src="https://img.shields.io/github/last-commit/replikativ/hasch"/></a>
+<a href="https://versions.deps.co/replikativ/hasch" title="Dependencies Status"><img src="https://versions.deps.co/replikativ/hasch/status.svg" /></a>
+</p>
+
 A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independent of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independent fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
 You can then create UUID5 (using SHA-512) from it. Alternatively you can use your own hash function, but this is not standardized and hence beyond the spec.
 
