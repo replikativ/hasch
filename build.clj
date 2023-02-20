@@ -1,14 +1,14 @@
 (ns build
-  (:require
-    [borkdude.gh-release-artifact :as gh]
-    [clojure.tools.build.api :as b]
-    [deps-deploy.deps-deploy :as dd])
+  (:refer-clojure :exclude [test])
+  (:require [clojure.tools.build.api :as b]
+            [borkdude.gh-release-artifact :as gh]
+            [deps-deploy.deps-deploy :as dd])
   (:import (clojure.lang ExceptionInfo)))
 
 (def org "replikativ")
 (def lib 'io.replikativ/hasch)
+(def current-commit (b/git-process {:git-args "rev-parse HEAD"}))
 (def version (format "0.3.%s" (b/git-count-revs nil)))
-(def current-commit (gh/current-commit))
 (def class-dir "target/classes")
 (def basis (b/create-basis {:project "deps.edn"}))
 (def jar-file (format "target/%s-%s.jar" (name lib) version))
