@@ -3,7 +3,7 @@
 
 <p align="center">
 <a href="https://clojurians.slack.com/archives/CB7GJAN0L"><img src="https://img.shields.io/badge/clojurians%20slack-join%20channel-blueviolet"/></a>
-<a href="https://clojars.org/io.replikativ/hasch"> <img src="https://img.shields.io/clojars/v/io.replikativ/hasch.svg" /></a>
+<a href="https://clojars.org/org.replikativ/hasch"> <img src="https://img.shields.io/clojars/v/org.replikativ/hasch.svg" /></a>
 <a href="https://circleci.com/gh/replikativ/hasch"><img src="https://circleci.com/gh/replikativ/hasch.svg?style=shield"/></a>
 <a href="https://github.com/replikativ/hasch/tree"><img src="https://img.shields.io/github/last-commit/replikativ/hasch"/></a>
 <a href="https://versions.deps.co/replikativ/hasch" title="Dependencies Status"><img src="https://versions.deps.co/replikativ/hasch/status.svg" /></a>
@@ -18,7 +18,7 @@ Support for edn types on the JVM and JavaScript is complete including records. T
 
 
 Add this to your leiningen project's dependencies:
-[![Clojars Project](http://clojars.org/io.replikativ/hasch/latest-version.svg)](http://clojars.org/io.replikativ/hasch)
+[![Clojars Project](http://clojars.org/org.replikativ/hasch/latest-version.svg)](http://clojars.org/org.replikativ/hasch)
 
 Then you can access the major function through `hasch.core`:
 
