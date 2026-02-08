@@ -1,7 +1,7 @@
 (ns hasch.core
   "Hashing functions for EDN."
   #?(:cljs (:refer-clojure :exclude [uuid]))
-  (:require [hasch.benc :refer [PHashCoercion -coerce digest]]
+  (:require [hasch.benc :refer [PHashCoercion -coerce digest] :as benc]
             [hasch.base64 :as b64]
             [hasch.platform :as platform]))
 
@@ -54,3 +54,15 @@
   but b64-hash is safer towards collisions."
   [val]
   (b64/encode (#?(:clj byte-array :cljs clj->js) (edn-hash val))))
+
+(defn hash-ref
+  "Create a HashRef from a value. Stores the -coerce output so that when
+   the HashRef appears inside a larger structure, it produces the same hash
+   as the original value — transparent merkle-style structural hashing.
+
+   (edn-hash (hash-ref x)) == (edn-hash x)
+   (uuid {:a (hash-ref x)}) == (uuid {:a x})"
+  ([val] (hash-ref val platform/sha512-message-digest {}))
+  ([val write-handlers] (hash-ref val platform/sha512-message-digest write-handlers))
+  ([val md-create-fn write-handlers]
+   (benc/->HashRef (-coerce val md-create-fn (or write-handlers {})))))

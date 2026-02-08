@@ -24,6 +24,11 @@
              :literal (byte 12)
              :binary (byte 13)})
 
+(defrecord HashRef [hash-bytes]
+  PHashCoercion
+  (-coerce [_this _md-create-fn _write-handlers]
+    hash-bytes))
+
 (def split-size 1024)
 
 (def max-entropy-byte-count 32)
