@@ -1,11 +1,11 @@
 {:paths ["src"]
- :deps {org.clojure/clojure        {:mvn/version "1.11.1"}
-        org.clojure/clojurescript  {:mvn/version "1.11.60"}
+ :deps {org.clojure/clojure        {:mvn/version "1.12.0"}
+        org.clojure/clojurescript  {:mvn/version "1.11.132"}
         org.replikativ/incognito    {:mvn/version "0.3.69"}}
- :aliases {:cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.20.20"}
+ :aliases {:cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.28.21"}
                                binaryage/devtools   {:mvn/version "1.0.6"}}
                   :extra-paths ["test"]}
-           :dev  {:extra-deps {criterium/criterium                  {:mvn/version "0.4.6"}}}
+           :dev  {:extra-deps {criterium/criterium {:mvn/version "0.4.6"}}}
            :test {:extra-deps {lambdaisland/kaocha                  {:mvn/version "1.77.1236"}
                                io.github.cognitect-labs/test-runner {:git/tag "v0.5.1"
                                                                      :git/sha "dfb30dd"}
@@ -13,11 +13,8 @@
                                io.replikativ/hasch                  {:local/root "."}}
                   :main-opts ["-m" "kaocha.runner"]
                   :extra-paths ["test"]}
-           ;; pull in specific versions of clojure and clojurescript
-           :1.7 {:override-deps {org.clojure/clojure       {:mvn/version "1.7.0"}
-                                 org.clojure/clojurescript {:mvn/version "1.7.228"}}}
-           :1.8 {:override-deps {org.clojure/clojure       {:mvn/version "1.8.0"}
-                                 org.clojure/clojurescript {:mvn/version "1.8.51"}}}
+           :bench {:extra-deps {criterium/criterium {:mvn/version "0.4.6"}}
+                   :jvm-opts ["-Xmx2g"]}
            :build  {:deps       {io.github.clojure/tools.build {:mvn/version "0.9.3"}
                                  slipset/deps-deploy           {:mvn/version "0.2.0"}
                                  borkdude/gh-release-artifact  {:git/url "https://github.com/borkdude/gh-release-artifact"
