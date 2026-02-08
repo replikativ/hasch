@@ -9,185 +9,190 @@
 <a href="https://versions.deps.co/replikativ/hasch" title="Dependencies Status"><img src="https://versions.deps.co/replikativ/hasch/status.svg" /></a>
 </p>
 
-A library to consistently crypto-hash [edn](https://github.com/edn-format/edn) data structures on Clojure and ClojureScript with SHA-512. The main motivation is that commutative data structures like maps, sets and records are not hashed in order as was the case with e.g. hashing a simple sequential serialisation, but have the same hash value independent of order. That way Clojure value semantics with `edn` are retained. UTF-8 is supported for strings, symbols and keywords. Beyond this tagged literals are supported in a generic runtime independent fashion and platform-neutral encoding (atm. between JVM and JavaScript) is taken care of.
-You can then create UUID5 (using SHA-512) from it. Alternatively you can use your own hash function, but this is not standardized and hence beyond the spec.
+Cross-platform cryptographic hashing of [EDN](https://github.com/edn-format/edn) data structures for Clojure and ClojureScript.
 
-Support for edn types on the JVM and JavaScript is complete including records. This works by printing the tagged-literal and rereading it as pure edn, which also ensures that the hashed value can be reproduced beyond the current runtime. Your type has to be pr-str-able for this to work. Records already have a default serialisation.
+## Overview
 
-## Usage <a href="https://gitter.im/replikativ/replikativ?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge&amp;utm_content=badge"><img src="https://camo.githubusercontent.com/da2edb525cde1455a622c58c0effc3a90b9a181c/68747470733a2f2f6261646765732e6769747465722e696d2f4a6f696e253230436861742e737667" alt="Gitter" data-canonical-src="https://badges.gitter.im/Join%20Chat.svg" style="max-width:100%;"></a>
+hasch produces deterministic, content-based hashes for EDN values. Commutative data structures (maps, sets, records) hash identically regardless of iteration order, preserving Clojure value semantics. Hashes are consistent across JVM and JavaScript runtimes.
 
+Two hashing modules are provided:
 
-Add this to your leiningen project's dependencies:
-[![Clojars Project](http://clojars.org/org.replikativ/hasch/latest-version.svg)](http://clojars.org/org.replikativ/hasch)
+- **`hasch.core`** — the original string-based encoding. Stable hashes, backward compatible.
+- **`hasch.fast`** — binary-encoded streaming digest. ~6-14x faster, produces different hashes.
 
-Then you can access the major function through `hasch.core`:
+Both modules support all EDN types, [incognito](https://github.com/replikativ/incognito) record serialization, and structural (merkle-style) hashing via `HashRef`.
 
-~~~clojure
-(use 'hasch.core)
-(edn-hash ["hello world" {:a 3.14} #{42} '(if true nil \f)])
-=> (120 75 53 36 42 91 14 22 174 251 7 222 83 57 158 140 192 131 251 17 176 29 252 118 83 2 106 187 223 17 84 232 24 103 183 27 19 174 222 37 246 138 132 126 172 46 249 42 62 46 66 32 33 100 88 168 4 242 90 25 5 228 2 88)
+## Installation
 
-(uuid5 (edn-hash "hello world"))
-=> #uuid "1227fe0a-471b-5329-88db-875fb82737a8"
+Add to `deps.edn`:
 
-;; or just use the convenience multi-arity uuid fn:
-(uuid) => #uuid "a27dfbb9-b69a-4f08-8df4-471464bfeb37"
-(uuid "hello world") => #uuid "1227fe0a-471b-5329-88db-875fb82737a8"
-~~~
+```clojure
+org.replikativ/hasch {:mvn/version "0.3.97"}
+```
 
+## Quick Start
 
-## Motivation
+### hasch.fast (recommended for new projects)
 
-The motivation is to exchange (potentially large) values in a hostile environment without conflicts. The concrete design motivation is to use the commit log of [replikativ](https://github.com/replikativ/replikativ) for exchange of datascript/datomic transaction logs. As long as you are in a trusted environment you can trust the random generator for conflict-free UUIDs as is done internally by many Clojure projects, but as soon as you distribute values, collisions can happen. Note that you can treat hasch's cryptographic UUIDs like random UUIDs internally and don't need to verify them.
+```clojure
+(require '[hasch.fast :as hf])
 
-## Maturity
+;; Generate UUID-5 from any EDN value
+(hf/uuid {:name "Alice" :age 30})
+;=> #uuid "2c6ea7f3-..."
 
-The library is tested in cross-platform [applications](https://github.com/replikativ/topiq). The hashing scheme can be considered stable. It is versioned, so we can fix any severe bug without breaking stored hashes.
+;; Random UUID-4
+(hf/uuid)
+;=> #uuid "a27dfbb9-..."
 
+;; Raw hash bytes
+(hf/edn-hash [1 2 3])
+;=> #object["[B" ...]
 
-## Why not use Clojure's `hash`?
+;; Hex string
+(hf/hash->str (hf/edn-hash "hello"))
+;=> "01046861..."
 
-I wish I could have done that instead of reimplementing my own hashing scheme for edn (there are more interesting problems). There is one major reason against using internal hash functions: They need to be very fast for efficient data-structures and hence trade this for potential but unlike collisions, which is unacceptable in an unsecure environment. For the same reason they also only work on 64 bit values, which is fine for a runtime, but not the internet.
+;; Base64
+(hf/b64-hash "hello")
+;=> "AQQA..."
 
-## Why not sort?
+;; SHA-256 variant (faster, still cryptographically secure)
+(hf/sha256-uuid {:data "value"})
+;=> #uuid "..."
 
-Sorting of heterogenous collections requires a unique serialization (e.g. pr-str or our encoding) on keys beforehand, which was sadly not faster even for small maps and sets. Sorting on number only maps was faster for maps until at least a size of one million. At some point the complexity of sorting becomes more expansive than xor-ing hashed kv-vectors, so sorting is a simple but not linearly scalable solution. Still it could prove valuable in the future.
+;; Sequential UUIDs (time-prefixed, sortable)
+(hf/squuid)
+;=> #uuid "67a5c81e-..."
+```
 
-## edn support
+### hasch.core (legacy / backward compatible)
 
-Support for `edn` types is complete including records. This works according to [incognito](https://github.com/replikativ/incognito) by hashing unknown records the same as their known counterparts. You need to supply the optional `write-handlers` to `uuid` if your records have a custom serialization. Otherwise incognito records won't match.
-Importantly the JVM class names are converted into cljs format `foo.bar_baz.Bar` -> `foo.bar-baz/Bar` before hashing. While this potentially allows maliciously induced collisions, you are safe if you use `incognito` or a similar mapping for cross-platform support, as it automatically serializes all record tags accordingly.
+```clojure
+(require '[hasch.core :as hc])
 
-## Safety
+;; Same API, different (legacy) hash values
+(hc/uuid {:name "Alice" :age 30})
+;=> #uuid "..."
 
-The library is designed safety first, speed second. I have put quite some thought into getting all input bits (entropy) into the cryptographic hash function. It should be impossible to construct a collision (beyond weaknesses in the underlying SHA-512 which is considered safe in year 2014). The biggest conceptual weakness is XOR-ing of sha-512 hashed elements in maps and sets.
+(hc/edn-hash [1 2 3])
+;=> (120 75 53 ...)  ;; returns seq of unsigned bytes
 
-*Once released, I'll offer a 100 $ bounty for proof of any collision, just open a github issue. This hashing is an important building block for distributed systems to me.*
+(hc/b64-hash "hello")
+;=> "..."
+```
 
-## Speed
+## hasch.fast vs hasch.core
 
-The first versions were just build around safety, but perform poorly with large values. The speed should be sufficient to be in the same order of magnitude as transmission speed (throughput + latency) over slow to mid-range internet broadband connections. If you want to transmit larger values fast, you maybe can chose a sequential binary encoding with native hashing speed. JavaScript performance is still significantly slower (~10x), seemingly due to the lack of native SHA hashing routines.
+| | hasch.fast | hasch.core |
+|---|---|---|
+| **Encoding** | Binary (direct byte layout) | String (pr-str of numbers) |
+| **Digest** | Streaming (update MessageDigest in-place) | Intermediate byte arrays per value |
+| **Speed** | ~6-14x faster | Baseline |
+| **Hash format** | SHA-512 with version prefix | SHA-512 |
+| **Compatibility** | New hashes | Stable, backward compatible |
+| **Record support** | incognito | incognito |
+| **Structural hashing** | `hasch.fast/HashRef` | `hasch.benc/HashRef` |
 
-*These are just micro-benchmarks on my 3 year old laptop, I just mention them so you can get an impression. *
+**When to use which:**
+- **New projects**: Use `hasch.fast`. The binary encoding is more efficient and the streaming digest avoids intermediate allocations.
+- **Existing data**: Use `hasch.core` if you have stored hashes that must remain stable (e.g., content-addressed storage, distributed logs).
+- **Migration**: The two modules produce incompatible hashes. Do not mix them for the same data.
 
-~~~clojure
-;; most important and worst case, what can be done?
-hasch.platform> (let [val (into {} (doall (map vec (partition 2
-                                                (interleave (range 1000000)
-                                                            (range 1000000))))))]
-    (bench (-coerce val sha512-message-digest)))
-Evaluation count : 60 in 60 samples of 1 calls.
-             Execution time mean : 3.596037 sec
-    Execution time std-deviation : 23.812536 ms
-   Execution time lower quantile : 3.566430 sec ( 2.5%)
-   Execution time upper quantile : 3.647540 sec (97.5%)
-                   Overhead used : 2.039920 ns
+## Structural Hashing with HashRef
 
-Found 4 outliers in 60 samples (6.6667 %)
-	low-severe	 3 (5.0000 %)
-	low-mild	 1 (1.6667 %)
- Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
-nil
+Both modules support **merkle-style structural hashing** via `HashRef`. A `HashRef` wraps pre-computed hash bytes so that when it appears inside a larger structure, the hash bytes are inlined directly instead of re-traversing the subtree.
 
-hasch.platform> (let [val (doall (range 1000000))]
-    (bench (-coerce val sha512-message-digest)))
-Evaluation count : 240 in 60 samples of 4 calls.
-             Execution time mean : 297.320276 ms
-    Execution time std-deviation : 2.683060 ms
-   Execution time lower quantile : 293.217179 ms ( 2.5%)
-   Execution time upper quantile : 302.059975 ms (97.5%)
-                   Overhead used : 2.039920 ns
+This is useful for content-addressed storage where you want to:
+- Hash large trees incrementally (only rehash the changed path)
+- Avoid pulling entire subtrees into memory just to compute a parent hash
+- Build git-like persistent data structures
 
-Found 1 outliers in 60 samples (1.6667 %)
-	low-severe	 1 (1.6667 %)
- Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
-nil
+```clojure
+(require '[hasch.fast :as hf])
 
-hasch.platform> (let [val (doall (into #{} (range 1000000)))]
-    (bench (-coerce val sha512-message-digest)))
-Evaluation count : 60 in 60 samples of 1 calls.
-             Execution time mean : 2.733429 sec
-    Execution time std-deviation : 15.463782 ms
-   Execution time lower quantile : 2.708645 sec ( 2.5%)
-   Execution time upper quantile : 2.758701 sec (97.5%)
-                   Overhead used : 2.039920 ns
+;; Hash a subtree once, wrap in HashRef
+(def child-ref (hf/hash-ref {:large "subtree" :with [1 2 3]}))
 
-Found 1 outliers in 60 samples (1.6667 %)
-	low-severe	 1 (1.6667 %)
- Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
-nil
+;; Use the HashRef in a parent structure - the child's hash bytes
+;; are inlined directly, no re-traversal needed
+(hf/uuid {:metadata "parent" :child child-ref})
 
-hasch.platform> (let [val (doall (repeat 1000000 "hello world"))]
-    (bench (-coerce val sha512-message-digest)))
-WARNING: Final GC required 1.472161970438994 % of runtime
-Evaluation count : 120 in 60 samples of 2 calls.
-             Execution time mean : 873.084789 ms
-    Execution time std-deviation : 5.753430 ms
-   Execution time lower quantile : 862.909606 ms ( 2.5%)
-   Execution time upper quantile : 885.560937 ms (97.5%)
-                   Overhead used : 2.039920 ns
+;; Changing the parent doesn't require re-hashing the child
+(hf/uuid {:metadata "updated" :child child-ref})
+```
 
-Found 2 outliers in 60 samples (3.3333 %)
-	low-severe	 2 (3.3333 %)
- Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
-nil
+**Important:** The two modules use different `HashRef` types that are not interchangeable:
 
-hasch.platform> (let [val (doall (repeat 1000000 :foo/bar))]
-    (bench (-coerce val sha512-message-digest)))
-WARNING: Final GC required 1.072577784478402 % of runtime
-Evaluation count : 120 in 60 samples of 2 calls.
-             Execution time mean : 756.394263 ms
-    Execution time std-deviation : 2.935836 ms
-   Execution time lower quantile : 750.827152 ms ( 2.5%)
-   Execution time upper quantile : 761.299697 ms (97.5%)
-                   Overhead used : 2.039920 ns
+- `hasch.fast/HashRef` implements `PStreamHash` — use only with `hasch.fast` functions
+- `hasch.benc/HashRef` implements `PHashCoercion` — use only with `hasch.core` functions
 
-Found 1 outliers in 60 samples (1.6667 %)
-	low-severe	 1 (1.6667 %)
- Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
-nil
+Using the wrong type throws an error to prevent accidental hash corruption.
 
-hasch.platform> (let [val (byte-array (* 1024 1024 300) (byte 42))] ;; 300 mib bytearray
-    (bench (-coerce val sha512-message-digest)))
-Evaluation count : 60 in 60 samples of 1 calls.
-             Execution time mean : 1.987549 sec
-    Execution time std-deviation : 134.189868 ms
-   Execution time lower quantile : 1.901676 sec ( 2.5%)
-   Execution time upper quantile : 2.304744 sec (97.5%)
-                   Overhead used : 1.967460 ns
+```clojure
+;; hasch.core HashRef
+(require '[hasch.core :as hc])
+(def core-ref (hc/hash-ref {:data "value"}))
+(hc/uuid {:parent true :child core-ref})  ;; OK
+;; (hf/uuid {:parent true :child core-ref})  ;; ERROR!
 
-Found 3 outliers in 60 samples (5.0000 %)
-	low-severe	 3 (5.0000 %)
- Variance from outliers : 50.1416 % Variance is severely inflated by outliers
-nil
+;; hasch.fast HashRef
+(def fast-ref (hf/hash-ref {:data "value"}))
+(hf/uuid {:parent true :child fast-ref})  ;; OK
+;; (hc/uuid {:parent true :child fast-ref})  ;; ERROR!
+```
 
-hasch.platform> (let [val (doall (vec (repeat 10000 {:db/id 18239
-                                       :person/name "Frederic"
-                                       :person/familyname "Johanson"
-                                       :person/street "Fifty-First Street 53"
-                                       :person/postal 38237
-                                       :person/phone "02343248474"
-                                       :person/weight 38.23})))]
-    (bench (-coerce val sha512-message-digest)))
-WARNING: Final GC required 1.2237845534164749 % of runtime
-Evaluation count : 240 in 60 samples of 4 calls.
-             Execution time mean : 322.164678 ms
-    Execution time std-deviation : 1.821136 ms
-   Execution time lower quantile : 318.232462 ms ( 2.5%)
-   Execution time upper quantile : 325.916354 ms (97.5%)
-                   Overhead used : 2.039920 ns
+## Record Hashing with incognito
 
-Found 4 outliers in 60 samples (6.6667 %)
-	low-severe	 2 (3.3333 %)
-	low-mild	 1 (1.6667 %)
-	high-mild	 1 (1.6667 %)
- Variance from outliers : 1.6389 % Variance is slightly inflated by outliers
-nil
+Records are hashed via [incognito](https://github.com/replikativ/incognito), which normalizes JVM class names to a platform-neutral format (`my.ns.MyRecord` → `my.ns/MyRecord`). This ensures records hash identically across JVM and ClojureScript.
 
-~~~
+```clojure
+(require '[hasch.fast :as hf])
 
+;; Records with default serialization work automatically
+(defrecord Person [name age])
+(hf/uuid (->Person "Alice" 30))
 
-# Changes
+;; Custom write-handlers for non-default serialization
+(hf/edn-hash (->Person "Alice" 30)
+             hf/sha512-message-digest
+             {'my.ns.Person (fn [r] [(:name r)])})
+```
+
+## Why Not Clojure's `hash`?
+
+Clojure's built-in `hash` is optimized for speed in data structures (murmur3, 32-bit) and intentionally trades collision resistance for performance. This is fine for hash maps but unacceptable for content-addressed systems where collisions could corrupt data. hasch uses SHA-512, providing cryptographic collision resistance suitable for distributed systems and untrusted environments.
+
+## Extending to Custom Types
+
+Extend `hasch.fast/PStreamHash` (or `hasch.benc/PHashCoercion` for hasch.core) to add hashing for your own types. However, in most cases it is simpler to make your type serializable via [incognito](https://github.com/replikativ/incognito).
+
+Your implementation must satisfy the equality relation:
+- `(= a b)` ⟹ `(= (edn-hash a) (edn-hash b))`
+- `(not= a b)` ⟹ `(not= (edn-hash a) (edn-hash b))`
+
+## Building
+
+```bash
+# Run JVM tests
+clj -M:test
+
+# Run CLJS tests (requires Node.js)
+npx shadow-cljs compile node-test
+
+# Build JAR
+clj -T:build jar
+
+# Install locally
+clj -T:build install
+
+# Deploy to Clojars
+clj -T:build deploy
+```
+
+## Changes
+
+- 0.3.97 Add `hasch.fast` module with binary streaming digest (~6-14x speedup). Add `HashRef` for merkle-style structural hashing. Add incognito support to `hasch.fast`.
 - 0.3.5 Support BigInteger and BigDecimal hashing (same as for limited precision types).
 - 0.3.4 Expose high-level base64 hashes with full precision.
 - 0.3.2 Minimize dependencies, explicit profiles for different Clojure(Script) versions
@@ -195,28 +200,9 @@ nil
 - 0.3.0 fix accidental hashing of records as maps
 - 0.3.0-beta4 fix record serialization with incognito
 - 0.3.0 Overhaul encoding for ~10x-20x times performance on the JVM. Use safe SHA-512. Add byte-array support for blobs.
-- 0.2.3 properly dispatch on IRecord (instead of IMap)
-- 0.2.2 cannot coerce record tags because of conflicts, rather extend record to properly print
-- 0.2.1 fix tag coercion on JVM
 
-## Extension to your own types
+## Contributors
 
-*Warning*: Getting all that right is not trivial. Don't mess with hashing extension if you don't have to, just make your type uniquely mappable with [incognito](https://github.com/replikativ/incognito)!
-
-You can avoid the mapping step to Clojure datastructures (also effectively allocating double memory) by extending the `hasch.benc/PHashCoercion` protocol to your types. You should orient on the `IRecord` implementation and must use `(:literal magics)` to avoid collisions with literal values of the same form. Either by using the default serialisation mechanism to retrieve a hash-value or by extending the hash-coercion, your serialisation or coercion must satisfy the *equality relation*:
-
-- hashes *must* follow `IEquiv` equality of Clojure(Script): `(= a b) <=> (= (edn-hash a) (edn-hash b))`, `(not= a b) <=> (not= (edn-hash a) (edn-hash b))`: Your serialisation has to be *unique*, hashing has to be injective or in other words you might not introduce collisions. Non-equal objects must have non-equal hashes.
-- *reflexivity*: `(= (edn-hash a) (edn-hash a))`, including on different runtimes
-- *symmetry*: `(= (edn-hash a) (edn-hash b)) <=> (= (edn-hash b) (edn-hash a))` (trivial because of `=`)
-- *transitivity*: `(and (= (edn-hash a) (edn-hash b)) (= (edn-hash b) (edn-hash c))) => (= (edn-hash a) (edn-hash c))` (also trivial because of `=`)
-
-
-# TODO
-- Use test.check/double.check property based tests between Java and JS (?)
-- Nested collections are hashed with the supplied hash-fn before they contribute to the hash-value. This allows to form a Merkle-tree like peristent data-structure by breaking out collection values, so you can rehash top-level collections without pulling the whole value in memory. This is not tested yet, a git-like store could be implemented, e.g. in [konserve](https://github.com/replikativ/konserve). This should be useful to build durable indexes also. But it might proof to need runtime tweaking, e.g. depending on value size.
-- If keeping sorted maps/sets is feasable for high-throughput applications, allow to hash them sequentally.
-
-# Contributors
 - Max Penet
 - James Conroy-Finn
 - Konrad Kühne
@@ -224,7 +210,7 @@ You can avoid the mapping step to Clojure datastructures (also effectively alloc
 
 ## License
 
-Copyright © 2014-2018 Christian Weilbach and contributors
+Copyright © 2014-2026 Christian Weilbach and contributors
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

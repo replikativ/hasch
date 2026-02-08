@@ -16,3 +16,4 @@ pom.xml.asc
 node_modules
 /public
 .cljs_node_repl/
+package-lock.json
