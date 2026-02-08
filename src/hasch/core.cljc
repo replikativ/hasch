@@ -1,7 +1,7 @@
 (ns hasch.core
   "Hashing functions for EDN."
   #?(:cljs (:refer-clojure :exclude [uuid]))
-  (:require [hasch.benc :refer [PHashCoercion -coerce digest]]
+  (:require [hasch.benc :refer [PHashCoercion -coerce digest] :as benc]
             [hasch.base64 :as b64]
             [hasch.platform :as platform]))
 
@@ -54,3 +54,15 @@
   but b64-hash is safer towards collisions."
   [val]
   (b64/encode (#?(:clj byte-array :cljs clj->js) (edn-hash val))))
+
+(defn hash-ref
+  "Create a HashRef from a value. Computes edn-hash and wraps the result
+   for use in structural/merkle-style hashing. When a HashRef appears inside
+   a larger structure, its pre-computed hash bytes are inlined directly
+   instead of re-traversing the subtree.
+
+   Note: HashRef values from hasch.core can only be used in hasch.core
+   computations (not hasch.fast), as the encoding formats differ."
+  ([val] (benc/->HashRef (#?(:clj byte-array :cljs clj->js) (edn-hash val))))
+  ([val write-handlers]
+   (benc/->HashRef (#?(:clj byte-array :cljs clj->js) (edn-hash val write-handlers)))))

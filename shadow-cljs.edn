@@ -16,6 +16,7 @@
   :node-test
   {:target :node-test
    :output-to "out/node-tests.js"
+   :ns-regexp "hasch\\.(api-test|fast-test)$"
    :autorun true}
 
   :ci

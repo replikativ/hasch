@@ -22,7 +22,17 @@
              :map (byte 10)
              :set (byte 11)
              :literal (byte 12)
-             :binary (byte 13)})
+             :binary (byte 13)
+             :hash-ref (byte 14)})
+
+(defrecord HashRef [hash-bytes]
+  PHashCoercion
+  (-coerce [_this md-create-fn _write-handlers]
+    #?(:clj (let [out (java.io.ByteArrayOutputStream.)]
+              (.write out (byte-array 1 (:hash-ref magics)))
+              (.write out ^bytes hash-bytes)
+              (.toByteArray out))
+       :cljs (.concat #js [(:hash-ref magics)] hash-bytes))))
 
 (def split-size 1024)
 
