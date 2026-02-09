@@ -8,7 +8,7 @@
 (def org "replikativ")
 (def lib 'org.replikativ/hasch)
 (def current-commit (b/git-process {:git-args "rev-parse HEAD"}))
-(def version (format "0.3.%s" (b/git-count-revs nil)))
+(def version (format "0.4.%s" (b/git-count-revs nil)))
 (def class-dir "target/classes")
 (def basis (b/create-basis {:project "deps.edn"}))
 (def jar-file (format "target/%s-%s.jar" (name lib) version))
