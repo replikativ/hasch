@@ -371,6 +371,14 @@
              (hc/uuid ref))
           "(uuid (hash-ref x)) == (uuid x)"))))
 
+(deftest ref->uuid-recovers-the-store-key-test
+  (testing "ref->uuid recovers (uuid val) from a HashRef ALONE — the key a content-
+            addressed store put the value under, so GC can follow refs without the value"
+    (doseq [val [42 :a "hello" {:a 1 :b [2 3]} #{1 2 3} [:x {:y 9}] (vec (range 100))
+                 {:transactions [[:assoc :k 1]] :parents [(hc/uuid :seed)]}]]
+      (is (= (hc/uuid val) (hc/ref->uuid (hc/hash-ref val)))
+          (str "(= (ref->uuid (hash-ref v)) (uuid v)) for " (pr-str val))))))
+
 (deftest hashref-structural-sharing-test
   (testing "Changing one subtree with HashRef changes root hash"
     (let [sub-a {:name "Alice" :scores [1 2 3]}
