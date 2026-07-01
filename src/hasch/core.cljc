@@ -8,6 +8,7 @@
 (def uuid4 platform/uuid4)
 (def uuid5 platform/uuid5)
 (def hash->str platform/hash->str)
+(def hash-ref? benc/hash-ref?)
 
 (defn edn-hash
   "Hash an edn value with SHA-512 by default or a compatible hash function of choice.
@@ -66,3 +67,17 @@
   ([val write-handlers] (hash-ref val platform/sha512-message-digest write-handlers))
   ([val md-create-fn write-handlers]
    (benc/->HashRef (-coerce val md-create-fn (or write-handlers {})))))
+
+(defn ref->uuid
+  "The UUID-5 the ORIGINAL value hashes to — i.e. `(uuid val)` — recovered from its
+   `HashRef` ALONE, without the value. A `HashRef` stores the value's `-coerce` output
+   (the pre-digest bytes); re-digesting them reproduces `edn-hash` → `uuid5`.
+
+     (= (ref->uuid (hash-ref v)) (uuid v))
+
+   So a content-addressed store keyed by `(uuid val)` can be traversed / garbage-collected
+   by following `HashRef`s embedded in other stored values — no original value required."
+  ([hash-ref] (ref->uuid hash-ref platform/sha512-message-digest))
+  ([hash-ref md-create-fn]
+   (uuid5 (map #(if (neg? %) (+ % 256) %)   ; make unsigned, as in edn-hash
+               (digest (:hash-bytes hash-ref) md-create-fn)))))

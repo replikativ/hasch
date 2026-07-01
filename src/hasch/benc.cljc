@@ -29,6 +29,11 @@
   (-coerce [_this _md-create-fn _write-handlers]
     hash-bytes))
 
+(defn hash-ref?
+  "Is `x` a HashRef (a content-address pointer)? Cross-platform."
+  [x]
+  (instance? HashRef x))
+
 (def split-size 1024)
 
 (def max-entropy-byte-count 32)
