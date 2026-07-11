@@ -1,5 +1,6 @@
 (ns hasch.platform
   (:require [goog.crypt]
+            [goog.crypt.Sha256]
             [goog.crypt.Sha512]
             [cljs.reader :as reader]
             [clojure.string]
@@ -89,6 +90,19 @@ Our hash version is coded in first 2 bits."
 
 (defn md5-message-digest []
   (goog.crypt.Md5.))
+
+;; Raw byte-level digests — portable, synchronous SHA (goog.crypt) that keyed
+;; crypto (HMAC/HKDF in geheimnis) builds on. Input/output are Uint8Array.
+
+(defn sha256 [bs]
+  (let [d (goog.crypt.Sha256.)]
+    (.update d bs)
+    (js/Uint8Array. (.digest d))))
+
+(defn sha512 [bs]
+  (let [d (goog.crypt.Sha512.)]
+    (.update d bs)
+    (js/Uint8Array. (.digest d))))
 
 (defn encode [magic a]
   (.concat #js [magic] a))

@@ -33,6 +33,20 @@
 (defn ^MessageDigest md5-message-digest []
   (MessageDigest/getInstance "md5"))
 
+;; Raw byte-level digests — the portable, synchronous SHA primitive that keyed
+;; crypto (HMAC/HKDF in geheimnis) builds on. NOT structural: these hash a
+;; byte-array, unlike edn-hash which hashes an edn value.
+
+(defn ^bytes sha256
+  "Raw SHA-256 digest of a byte-array -> byte-array."
+  [^bytes bs]
+  (.digest (MessageDigest/getInstance "SHA-256") bs))
+
+(defn ^bytes sha512
+  "Raw SHA-512 digest of a byte-array -> byte-array."
+  [^bytes bs]
+  (.digest (MessageDigest/getInstance "SHA-512") bs))
+
 (defn uuid5
   "Generates a UUID version 5 from a sha-1 hash byte sequence.
 Our hash version is coded in first 2 bits."
