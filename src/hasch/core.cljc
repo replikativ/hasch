@@ -10,6 +10,13 @@
 (def hash->str platform/hash->str)
 (def hash-ref? benc/hash-ref?)
 
+;; Raw byte-level SHA digests (byte-array -> byte-array), synchronous on both
+;; platforms. These hash BYTES, not edn values (that is `edn-hash`). Exposed so
+;; the crypto layer (geheimnis HMAC/HKDF) reuses hasch's portable SHA rather
+;; than reimplementing it.
+(def sha256 platform/sha256)
+(def sha512 platform/sha512)
+
 (defn edn-hash
   "Hash an edn value with SHA-512 by default or a compatible hash function of choice.
 
