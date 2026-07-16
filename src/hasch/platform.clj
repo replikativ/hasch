@@ -7,6 +7,7 @@
             [hasch.benc :refer [magics PHashCoercion -coerce
                                 digest coerce-seq xor-hashes encode-safe]])
   (:import java.io.ByteArrayOutputStream
+           java.io.InputStream
            java.nio.ByteBuffer
            java.security.MessageDigest))
 
@@ -71,6 +72,45 @@ Our hash version is coded in first 2 bits."
 
 (defn- ^bytes str->utf8 [x]
   (-> x str (.getBytes "UTF-8")))
+
+(defn ^bytes input-stream->binary-coercion
+  "Consume `in` and return exactly the same hash coercion as a byte array with
+  the same contents. The caller owns and closes the stream.
+
+  Hasch represents binaries shorter than `split-size` directly (with collision
+  escaping), and larger binaries by their digest. Buffering at most
+  `split-size` bytes lets an unknown-length stream select the same representation
+  without materializing a large value."
+  [^InputStream in md-create-fn]
+  (let [prefix (byte-array split-size)]
+    (loop [offset 0]
+      (let [read-count (.read in prefix offset (- split-size offset))]
+        (cond
+          (neg? read-count)
+          (encode (:binary magics)
+                  (encode-safe (if (zero? offset)
+                                 (byte-array 0)
+                                 (java.util.Arrays/copyOf prefix offset))
+                               md-create-fn))
+
+          (zero? read-count)
+          (recur offset)
+
+          (< (+ offset read-count) split-size)
+          (recur (+ offset read-count))
+
+          :else
+          (let [^MessageDigest md (md-create-fn)
+                buffer (byte-array (* 1024 1024))]
+            (.update md prefix)
+            (loop []
+              (let [n (.read in buffer)]
+                (cond
+                  (neg? n) (encode (:binary magics) (.digest md))
+                  (zero? n) (recur)
+                  :else (do
+                          (.update md buffer 0 n)
+                          (recur)))))))))))
 
 (extend-protocol PHashCoercion
   java.lang.Boolean
@@ -165,26 +205,14 @@ Our hash version is coded in first 2 bits."
                                                     md-create-fn)
                                            (seq this)))))
 
-  ;; not ideal, InputStream might be more flexible
-  ;; file is used due to length knowledge
+  java.io.InputStream
+  (-coerce [in md-create-fn _write-handlers]
+    (input-stream->binary-coercion in md-create-fn))
+
   java.io.File
-  (-coerce [f md-create-fn write-handlers]
-    (let [^MessageDigest md (md-create-fn)
-          len (.length f)]
-      (with-open [fis (java.io.FileInputStream. f)]
-        (encode (:binary magics)
-                ;; support default split-size behaviour transparently
-                (if (< len split-size)
-                  (let [ba (with-open [out (java.io.ByteArrayOutputStream.)]
-                             (clojure.java.io/copy fis out)
-                             (.toByteArray out))]
-                    (encode-safe ba md-create-fn))
-                  (let [ba (byte-array (* 1024 1024))]
-                    (loop [size (.read fis ba)]
-                      (if (neg? size) (.digest md)
-                          (do
-                            (.update md ba 0 size)
-                            (recur (.read fis ba))))))))))))
+  (-coerce [f md-create-fn _write-handlers]
+    (with-open [in (java.io.FileInputStream. f)]
+      (input-stream->binary-coercion in md-create-fn))))
 
 (extend (Class/forName "[B")
   PHashCoercion
