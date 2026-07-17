@@ -5,7 +5,8 @@
             [hasch.hex :as hex]
             [hasch.platform :refer [uuid5 hash->str #?(:cljs utf8)]]
             [incognito.base :as ic]
-            [clojure.test :as t :refer (is deftest testing)]))
+            [clojure.test :as t :refer (is deftest testing)])
+  #?(:clj (:import [java.io ByteArrayInputStream FilterInputStream])))
 
 #?(:cljs (def byte-array into-array))
 
@@ -101,6 +102,27 @@
                edn-hash
                uuid5)
            #uuid "386eabb0-8adc-52a2-a715-5a74c9197646"))))
+
+#?(:clj
+   (deftest input-stream-binary-hashing
+     (testing "InputStreams hash identically to in-memory byte arrays"
+       (doseq [size [0 1 17 1023 1024 1025 65537]]
+         (let [bytes (byte-array (map unchecked-byte (take size (cycle (range 251)))))]
+           (with-open [in (ByteArrayInputStream. bytes)]
+             (is (= (edn-hash bytes) (edn-hash in)) (str "size " size)))
+           (with-open [in (ByteArrayInputStream. bytes)]
+             (is (= (uuid bytes) (uuid in)) (str "UUID size " size))))))
+
+     (testing "short reads do not affect the hash"
+       (let [bytes (byte-array (map unchecked-byte (take 8193 (cycle (range 251)))))]
+         (with-open [source (ByteArrayInputStream. bytes)
+                     in (proxy [FilterInputStream] [source]
+                          (read
+                            ([] (proxy-super read))
+                            ([buffer] (proxy-super read buffer))
+                            ([buffer offset length]
+                             (proxy-super read buffer offset (min 7 length)))))]
+           (is (= (uuid bytes) (uuid in))))))))
 
 (deftest hash-stringification
   (testing "Stringification."
