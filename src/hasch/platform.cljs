@@ -110,6 +110,25 @@ Our hash version is coded in first 2 bits."
 (defn- str->utf8 [x]
   (-> x str utf8))
 
+;; Primitive numeric arrays hash from their canonical IEEE-754 *big-endian*
+;; bytes (DataView with littleEndian=false), matching the JVM's ByteBuffer in
+;; platform.clj so an equal-valued Float32Array/float[] (and Float64Array/
+;; double[]) hash identically across platforms. Returns a plain JS array of
+;; 0-255 byte values, the shape encode-safe already consumes for Uint8Array.
+(defn- typed-array->be-bytes [typed-arr elem-bytes set-fn]
+  (let [n (.-length typed-arr)
+        buf (js/ArrayBuffer. (* elem-bytes n))
+        dv (js/DataView. buf)]
+    (dotimes [i n]
+      (set-fn dv (* elem-bytes i) (aget typed-arr i) false)) ; false = big-endian
+    (js/Array.prototype.slice.call (js/Uint8Array. buf))))
+
+(defn- float32-array->bytes [a]
+  (typed-array->be-bytes a 4 (fn [dv off v _le] (.setFloat32 dv off v _le))))
+
+(defn- float64-array->bytes [a]
+  (typed-array->be-bytes a 8 (fn [dv off v _le] (.setFloat64 dv off v _le))))
+
 (extend-protocol PHashCoercion
   nil
   (-coerce [this md-create-fn write-handlers]
@@ -172,6 +191,12 @@ Our hash version is coded in first 2 bits."
 
           (instance? js/Uint8Array this)
           (encode (:binary magics) (encode-safe (js/Array.prototype.slice.call this) md-create-fn))
+
+          (instance? js/Float32Array this)
+          (encode (:float-array magics) (encode-safe (float32-array->bytes this) md-create-fn))
+
+          (instance? js/Float64Array this)
+          (encode (:double-array magics) (encode-safe (float64-array->bytes this) md-create-fn))
 
           :else
           (throw (ex-info "Cannot hash unknown type, you can extend PHashCoercion protocol for:"

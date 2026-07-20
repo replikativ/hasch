@@ -219,6 +219,37 @@ Our hash version is coded in first 2 bits."
   {:-coerce (fn [^bytes this md-create-fn write-handlers]
               (encode (:binary magics) (encode-safe this md-create-fn)))})
 
+;; Primitive numeric arrays hash from their canonical IEEE-754 *big-endian*
+;; bytes. Big-endian is chosen so the byte layout is fixed across platforms:
+;; the same 4-byte float32 / 8-byte float64 bit-patterns are produced by a JS
+;; Float32Array/Float64Array (see platform.cljs), so equal-valued arrays hash
+;; identically on the JVM and in the browser. (Coercing via the numbers' string
+;; form would not be portable — a JVM float 0.1 prints "0.1" but the same
+;; float32 widened to a JS number prints "0.10000000149011612".)
+(defn ^bytes float-array->bytes [^floats a]
+  (let [n (alength a)
+        bb (java.nio.ByteBuffer/allocate (* 4 n))]      ; big-endian by default
+    (dotimes [i n] (.putFloat bb (aget a i)))
+    (.array bb)))
+
+(defn ^bytes double-array->bytes [^doubles a]
+  (let [n (alength a)
+        bb (java.nio.ByteBuffer/allocate (* 8 n))]
+    (dotimes [i n] (.putDouble bb (aget a i)))
+    (.array bb)))
+
+(extend (Class/forName "[F")
+  PHashCoercion
+  {:-coerce (fn [^floats this md-create-fn write-handlers]
+              (encode (:float-array magics)
+                      (encode-safe (float-array->bytes this) md-create-fn)))})
+
+(extend (Class/forName "[D")
+  PHashCoercion
+  {:-coerce (fn [^doubles this md-create-fn write-handlers]
+              (encode (:double-array magics)
+                      (encode-safe (double-array->bytes this) md-create-fn)))})
+
 (comment
   (require '[clojure.java.io :as io])
   (def foo (io/file "/tmp/foo"))

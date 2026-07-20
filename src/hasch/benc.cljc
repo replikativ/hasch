@@ -8,7 +8,8 @@
 (defprotocol PHashCoercion
   (-coerce [this md-create-fn write-handlers]))
 
-;; changes break hashes!
+;; changes break hashes! (adding a NEW key is safe — existing values keep their
+;; magic byte; only reassigning an existing key would break prior hashes.)
 (def magics {:nil (byte 0)
              :boolean (byte 1)
              :number (byte 2)
@@ -22,7 +23,13 @@
              :map (byte 10)
              :set (byte 11)
              :literal (byte 12)
-             :binary (byte 13)})
+             :binary (byte 13)
+             ;; primitive numeric arrays, coerced from their canonical IEEE-754
+             ;; big-endian bytes so a JVM float[]/double[] and a JS
+             ;; Float32Array/Float64Array of equal values hash identically. A
+             ;; distinct magic keeps them from colliding with :binary or :vector.
+             :float-array (byte 14)
+             :double-array (byte 15)})
 
 (defrecord HashRef [hash-bytes]
   PHashCoercion
