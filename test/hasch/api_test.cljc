@@ -86,6 +86,23 @@
                         :clj (byte-array [1 2 3 42 149])))
            '(135 209 248 171 162 90 41 221 173 216 64 218 222 93 242 60 243 5 190 153 101 194 74 130 55 184 84 148 167 94 210 250 140 211 6 234 221 25 113 83 153 75 180 4 194 163 178 197 243 126 27 172 248 169 161 90 102 172 160 98 249 32 42 157)))))
 
+(deftest primitive-numeric-array-coercion
+  (testing "float[]/double[] (JVM) and Float32Array/Float64Array (JS) coerce to
+            fixed, cross-platform-identical hashes via canonical IEEE-754
+            big-endian bytes. These literals were produced on the JVM; the same
+            .cljc test runs under node-test, so its passing there proves the two
+            platforms agree byte-for-byte."
+    (let [fa #?(:clj (float-array [1.5 2.5 3.5])  :cljs (js/Float32Array. #js [1.5 2.5 3.5]))
+          da #?(:clj (double-array [1.5 2.5 3.5]) :cljs (js/Float64Array. #js [1.5 2.5 3.5]))]
+      (is (= (edn-hash fa)
+             '(195 249 30 210 135 154 193 234 102 80 245 129 156 245 4 138 46 245 122 2 178 238 81 79 22 101 160 158 40 230 251 20 135 241 245 28 13 172 48 206 21 23 20 185 169 117 22 222 224 201 223 39 199 69 224 5 139 243 103 122 220 229 89 65)))
+      (is (= (edn-hash da)
+             '(209 200 247 227 171 49 22 207 125 108 221 170 200 21 230 156 85 20 198 158 31 179 213 33 248 205 125 182 8 65 192 243 183 22 21 118 148 223 173 143 89 24 40 229 3 105 8 224 176 8 73 65 56 39 215 138 57 104 41 84 76 162 187 205)))
+      ;; a float[] and a double[] of equal values differ (byte width + magic),
+      ;; and both differ from the boxed vector of the same numbers
+      (is (not= (edn-hash fa) (edn-hash da)))
+      (is (not= (edn-hash fa) (edn-hash [1.5 2.5 3.5]))))))
+
 (deftest padded-coercion
   (testing "Padded xor coercion for commutative collections."
     (is (= (map byte
