@@ -24,12 +24,13 @@
              :set (byte 11)
              :literal (byte 12)
              :binary (byte 13)
-             ;; primitive numeric arrays, coerced from their canonical IEEE-754
-             ;; big-endian bytes so a JVM float[]/double[] and a JS
-             ;; Float32Array/Float64Array of equal values hash identically. A
-             ;; distinct magic keeps them from colliding with :binary or :vector.
+             ;; primitive numeric arrays, coerced from canonical big-endian
+             ;; integer/IEEE-754 bytes so corresponding JVM and JS typed arrays
+             ;; hash identically. Distinct magics keep each element domain from
+             ;; colliding with :binary, :vector, or another numeric width.
              :float-array (byte 14)
-             :double-array (byte 15)})
+             :double-array (byte 15)
+             :short-array (byte 16)})
 
 (defrecord HashRef [hash-bytes]
   PHashCoercion

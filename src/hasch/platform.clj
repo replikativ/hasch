@@ -219,13 +219,19 @@ Our hash version is coded in first 2 bits."
   {:-coerce (fn [^bytes this md-create-fn write-handlers]
               (encode (:binary magics) (encode-safe this md-create-fn)))})
 
-;; Primitive numeric arrays hash from their canonical IEEE-754 *big-endian*
-;; bytes. Big-endian is chosen so the byte layout is fixed across platforms:
-;; the same 4-byte float32 / 8-byte float64 bit-patterns are produced by a JS
-;; Float32Array/Float64Array (see platform.cljs), so equal-valued arrays hash
-;; identically on the JVM and in the browser. (Coercing via the numbers' string
-;; form would not be portable — a JVM float 0.1 prints "0.1" but the same
-;; float32 widened to a JS number prints "0.10000000149011612".)
+;; Primitive numeric arrays hash from canonical *big-endian* bytes. Big-endian
+;; fixes their layout across platforms: JVM short[]/float[]/double[] and the
+;; corresponding JS typed arrays therefore hash identically. Each width and
+;; element domain has a distinct magic, so these structured numeric values do
+;; not alias raw binary or each other. (Coercing floats through strings would
+;; not be portable — a JVM float 0.1 prints "0.1" but the same float32 widened
+;; to a JS number prints "0.10000000149011612".)
+(defn ^bytes short-array->bytes [^shorts a]
+  (let [n (alength a)
+        bb (java.nio.ByteBuffer/allocate (* 2 n))]      ; big-endian by default
+    (dotimes [i n] (.putShort bb (aget a i)))
+    (.array bb)))
+
 (defn ^bytes float-array->bytes [^floats a]
   (let [n (alength a)
         bb (java.nio.ByteBuffer/allocate (* 4 n))]      ; big-endian by default
@@ -237,6 +243,12 @@ Our hash version is coded in first 2 bits."
         bb (java.nio.ByteBuffer/allocate (* 8 n))]
     (dotimes [i n] (.putDouble bb (aget a i)))
     (.array bb)))
+
+(extend (Class/forName "[S")
+  PHashCoercion
+  {:-coerce (fn [^shorts this md-create-fn write-handlers]
+              (encode (:short-array magics)
+                      (encode-safe (short-array->bytes this) md-create-fn)))})
 
 (extend (Class/forName "[F")
   PHashCoercion
