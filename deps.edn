@@ -1,7 +1,12 @@
 {:paths ["src"]
  :deps {org.clojure/clojure        {:mvn/version "1.12.0"}
         org.clojure/clojurescript  {:mvn/version "1.11.132"}
-        org.replikativ/incognito    {:mvn/version "0.3.69"}}
+        ;; 0.3.71: incognito.transit's write handler no longer resolves its two
+        ;; super calls reflectively (incognito#23). hasch itself only uses
+        ;; incognito.base, but it ships the transit namespace, and hasch is
+        ;; compiled into datahike's `dthk` native image, where a reflective
+        ;; call works only if it was registered at build time.
+        org.replikativ/incognito    {:mvn/version "0.3.71"}}
  :aliases {:cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.28.21"}
                                binaryage/devtools   {:mvn/version "1.0.6"}}
                   :extra-paths ["test"]}
